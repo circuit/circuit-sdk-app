@@ -143,10 +143,6 @@ button:hover {
   overflow: hidden;
 }
 
-.img-circle {
-  border-radius: 50%;
-}
-
 .avatar-small {
   width: 35px;
   height: 35px;
@@ -303,24 +299,6 @@ button:hover {
       .chat-img {
         position: relative;
         margin-right: 10px;
-      }
-
-      .presence {
-        padding: 6px 6px;
-        border-radius: 100%;
-        position: absolute;
-        top: 38px;
-        left: 38px;
-
-        &.available {
-          background: #88c541;
-        }
-        &.away {
-          background: #ffef38;
-        }
-        &.busy {
-          background: #c22026;
-        }
       }
 
       .teaser {
@@ -643,3 +621,55 @@ button:hover {
   }
 }
 
+
+/******************************/
+/* Avatar                     */
+/******************************/
+.avatar-component {
+  position: relative;
+  margin-right: 10px;
+  float: left;
+
+  >img {
+    border-radius: 50%;
+  }
+
+  &.small>img {
+    width: 35px;
+    height: 35px;
+  }
+
+  &.large>img {
+    width: 55px;
+    height: 55px;
+  }
+
+  &.small>div {
+    padding: 5px 5px;
+    top: 26px;
+    left: 26px;
+  }
+  &.large>div {
+    padding: 7px 7px;
+    top: 42px;
+    left: 42px;
+  }
+
+  >div {
+    border-radius: 100%;
+    position: absolute;
+    &.AVAILABLE {
+      background: #88c541;
+    }
+    &.AWAY {
+      background: #ffef38;
+    }
+    &.BUSY {
+      background: #c22026;
+    }
+    &.DND {
+      background: #c22026;
+    }
+  }
+
+}

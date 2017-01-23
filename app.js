@@ -221,9 +221,12 @@ var app = new Vue({
                 });
             })
 
-            return client.logonCheck()
+            client.logonCheck()
             .then(this.init.bind(null, system))
-            .catch(console.info.bind(`Cannot auto logon to ${systemname}. Require user action to trigger OAuth popup.`));
+            .catch(err => {
+                this.systemLoading = false;
+                console.error(`Cannot auto logon to ${systemname}. Require user action to trigger OAuth popup.`);
+            });
         }
     },
     updated: function () {
@@ -253,20 +256,7 @@ var app = new Vue({
 
             // Hide editor until feed is rendered
             self.showMainEditor = false;
-/*
 
-            function setPresence(presence) {
-                if (!Array.isArray(presence)) {
-                    presence = [presence];
-                }
-                presence.forEach(p => {
-                    if (self.usersHT[p.userId]) {
-                        p.state = p.state.capitalizeFirstLetter();
-                        self.usersHT[p.userId].presence = p;
-                    }
-                });
-            }
-*/
             // Different conversation is being selected. If not already
             // processed, fetch new users and add them to a hashtable
             // and to conversation.otherUsers
@@ -314,31 +304,8 @@ var app = new Vue({
             })
             // Get the user object for the creators. If not yet in cache
             // fetch them from the server.
-            .then(creatorIds => {
-                let newUserIds = [], existingUsers = [];
-                creatorIds.forEach(creatorId => {
-                    let user = this.usersHT[creatorId];
-                    if (user) {
-                        existingUsers.push(user);
-                    } else {
-                        newUserIds.push(creatorId);
-                    }
-                });
-                if (newUserIds.length) {
-                    return new Promise((resolve, reject) => {
-                        client.getUsersById(newUserIds)
-                        .then(users => {
-                            users.forEach(user => this.usersHT[user.userId] = user);
-                            existingUsers.push.apply(existingUsers, users);
-                            return resolve(existingUsers);
-                        })
-                        .catch(reject);
-                    })
-                } else {
-                    return existingUsers;
-                }
-            })
-            // Add users to cache, and also to their item object as `creator`
+            .then(self.processUsers)
+            // Set the creator object on the post and comments
             .then(users => {
                 users.forEach(user => {
                     this.usersHT[user.userId] = user;
@@ -372,6 +339,126 @@ var app = new Vue({
     },
 
     methods: {
+        init: function (system) {
+            let self = this;
+            // Show landing page
+            this.clearSystem();
+            this.systemLoading = true;
+            this.connectingSystem = system.name;
+
+            return client.logon()
+            .then(user => {
+                console.log(`Successfully authenticated as ${user.displayName}`);
+                user.presence = user.userPresenceState;
+                this.user = user;
+                this.$set(this.usersHT, user.userId, user);
+            })
+            .then(this.addEventListeners)
+            .then(_ => client.subscribePresence.bind(null, [self.user.userId]))
+            .then(client.getConversations.bind(null, {numberOfConversations: 100, numberOfParticipants: 4}))
+            .then(conversations => {
+                this.conversations = conversations.reverse();
+                this.conversation = this.conversations[0];
+                this.setFilter('all');
+                this.setSystem(system);
+                this.systemLoading = false;
+                return this.processConversations(this.conversations);
+            })
+            .then(client.setPresence.bind(null, {state: Circuit.Enums.PresenceState.AVAILABLE}))
+            .then(_ => { return client.getPresence([this.user.userId]); })
+            .then(p => this.$set(this.usersHT[p[0].userId], 'presence', p[0]))
+            .catch(_ => this.systemLoading = false);
+        },
+        addEventListeners: function () {
+            client.addEventListener('userPresenceChanged', data => {
+                let user = this.usersHT[data.presenceState.userId];
+                if (user) {
+                    this.$set(user, 'presence', data.presenceState);
+                }
+            });
+        },
+        processConversations: function (convs) {
+            let self = this;
+            // Add new conversations to the cache and looks up
+            // new users for direct conversations
+            return new Promise((resolve, reject) => {
+                let newUserIds = [];
+                convs.forEach(c => {
+                    if (c.type === Circuit.Enums.ConversationType.DIRECT) {
+                        let peerUserId = c.participants.filter(p => { 
+                            return p !== client.loggedOnUser.userId;
+                        })[0];
+                        if (!self.usersHT[peerUserId]) {
+                            newUserIds.push(peerUserId);
+                            c.peerUserId = peerUserId;
+                        }
+                    } else if (c.topic || c.topicPlaceholder) {
+                        // Group conversation. Named or server-computed string
+                        // of first 5 participant firstnames
+                        c.title = c.topic || c.topicPlaceholder;
+                    }
+                })
+                self.processUsers(newUserIds)
+                .then(_ => {
+                    convs.forEach(c => {
+                        if (c.peerUserId) {
+                            c.peerUser = self.usersHT[c.peerUserId];
+                            // TODO: Don't copy those. Instead looks them up in the userHT when needed
+                            c.avatarLarge = c.peerUser.avatarLarge;
+                            c.avatar = c.peerUser.avatar;
+                            c.title = c.peerUser.displayName;
+                        }
+                    });
+                    resolve();
+                })
+                .catch(reject);
+            });
+        },
+        processUsers: function (userIds) {
+            let self = this;
+            // Add the new users to the cache, get their
+            // presence and suscribe to their presence.
+            // In a production app the subscriptions should
+            // be limited in some way.
+            return new Promise((resolve, reject) => {
+                let newUserIds = [], existingUsers = [];
+                userIds.forEach(userId => {
+                    let user = this.usersHT[userId];
+                    if (user) {
+                        existingUsers.push(user);
+                    } else {
+                        newUserIds.push(userId);
+                    }
+                });
+                if (newUserIds.length) {
+                    // Limit getting more than 100 users at a time
+
+                    return client.getUsersById(newUserIds)
+                    .then(users => {
+                        console.log(`Retrieved ${users.length} users from server`);
+                        users.forEach(user => this.$set(this.usersHT, user.userId, user));
+                        existingUsers.push.apply(existingUsers, users);
+                    })
+                    .then(client.getPresence.bind(null, newUserIds))
+                    .then(presence => {
+                        console.log(`Retrieved and subscribing presence for ${presence.length} users from server`);
+                        if (!Array.isArray(presence)) {
+                            presence = [presence];
+                        }
+                        presence.forEach(p => {
+                            if (this.usersHT[p.userId]) {
+                                this.$set(this.usersHT[p.userId], 'presence', p);
+                            }
+                        });
+                    })
+                    .then(client.subscribePresence.bind(null, newUserIds))
+                    .then(_ => resolve(existingUsers))
+                    .catch(reject);
+                } else {
+                    resolve(existingUsers);
+                }
+            });
+        },
         startThread: function () {
             let topic = subjectEditor.getText();
             topic = topic === '\n' ? undefined : topic;
@@ -424,31 +511,6 @@ var app = new Vue({
         },
         content: function (s) {
             return s.replace(/<(hr[\/]?)>/gi, '<br>');
-        },
-        init: function (system) {
-            // Show landing page
-            this.clearSystem();
-            this.systemLoading = true;
-            this.connectingSystem = system.name;
-
-            return client.logon()
-            .then(user => {
-                console.log(`Successfully authenticated as ${user.displayName}`);
-                this.user = user;
-                this.usersHT[user.userId] = user;
-                return {numberOfConversations: 100, numberOfParticipants: 4};
-            })
-            .then(client.getConversations)
-            .then(conversations => {
-                this.conversations = conversations.reverse();
-                this.conversation = this.conversations[0];
-                this.setFilter('all');
-                this.setSystem(system);
-                this.systemLoading = false;
-            })
-            .catch(() => {
-                this.systemLoading = false;
-            });
         },
         setFilter: function (filter) {
             let conversations = [];
@@ -566,9 +628,6 @@ var app = new Vue({
             });
             app.init(system)
             .catch(console.error);
-        },
-        _processNewConversation: function (c) {
-
         }
     }
 });

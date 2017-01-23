@@ -3,35 +3,11 @@
 // direct conversation peer, the topic of a group conversation (if given),
 // or a list of the first 5 members firstnames
 Circuit.Injectors.conversationInjector = conv => {
-    return new Promise((resolve, reject) => {
-        conv.participantList = [];
-        conv.dialInDetails = {
-            isModerationAllowed: undefined
-        };
-        conv.isGuestAccessEnabled = !conv.isGuestAccessDisabled;
-
-        if (conv.topic || conv.topicPlaceholder) {
-            // Group conversation. Named or server-computed string
-            // of first 5 participant firstnames
-            conv.title = conv.topic || conv.topicPlaceholder;
-            resolve(conv);
-            return;
-        } else if (conv.type === Circuit.Enums.ConversationType.DIRECT) {
-            let peerUserId = conv.participants.filter(p => { return p !== client.loggedOnUser.userId; });
-            client.getUsersById(peerUserId)
-            .then(users => {
-                conv.peerUser = users[0];
-                conv.avatarLarge = conv.peerUser.avatarLarge;
-                conv.avatar = conv.peerUser.avatar;
-                conv.title = conv.peerUser.displayName;
-                resolve(conv);
-            })
-            .catch(reject);
-        } else {
-            conv.topic = 'unknown';
-            resolve(conv);
-        }
-    });
+    conv.participantList = [];
+    conv.dialInDetails = {
+        isModerationAllowed: undefined
+    };
+    conv.isGuestAccessEnabled = !conv.isGuestAccessDisabled;
 }
 
 

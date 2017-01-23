@@ -47,7 +47,7 @@
       <nav id="header" class="navbar navbar-inverse bg-inverse p-1" v-show="!!system">
         <form class="form-inline mr-3 ml-2">
           <a class="navbar-text p-0" data-toggle="modal" data-target="#profileModal">
-            <img :src="user && user.avatar" v-if="user" class="d-inline-block align-top mr-2 avatar-small">
+            <avatar :presence="user && user.presence" :img-url="user && user.avatar"></avatar>
             {{user && user.firstName}}
           </a>
           <a tabindex="1" class="nav-item ml-auto" data-toggle="modal" data-target="#infoModal">
@@ -104,11 +104,7 @@
                 <ul class="chat">
                   <li v-for="c in filteredConversations" :key="c.convId" v-on:click="selectConversation(c)" :class="{selected: c.convId==conversation.convId, unread: c.userData 
                   && (c.userData.unreadItems > 0)}" class="left clearfix">
-                    <div data-toggle="tooltip" data-placement="right" data-offset="0 -10"></div>
-                    <span class="chat-img pull-left">
-                      <img :src="c.avatar" class="avatar-large" />
-                      <div class="presence" v-if="c.peerUser && c.peerUser.presence" :class="c.peerUser.presence.state"></div>
-                    </span>
+                    <avatar size="large" :presence="c.peerUser && c.peerUser.presence" :img-url="c.avatar"></avatar>
                     <div class="chat-body clearfix">
                       <div class="header ellipsis">
                         <strong class="primary-font">{{c.title}}</strong>
@@ -132,8 +128,7 @@
 
               <!-- Conversation Header -->
               <div class="media header">
-                <img class="d-flex mr-3 avatar-large" :src="conversation.avatar">
-                <div v-if="conversation.peerUser" class="presence" :class="conversation.peerUser.userPresenceState && conversation.peerUser.userPresenceState.state"></div>
+                <avatar class="d-flex mr-3" size="large" :presence="conversation.peerUser && conversation.peerUser.presence" :img-url="conversation.avatar"></avatar>
                 <div class="media-body">
                   <h3 class="mt-1 mb-1 fw4">{{conversation.title}}</h3>
                   <div class="d-flex tabs">
@@ -157,7 +152,7 @@
                     <ul class="list-unstyled">
                       <li class="media" 
                         v-for="thread in conversation.threads" :key="thread.parentItem.itemId" v-if="thread.parentItem.type=='TEXT'" :id="thread.parentItem.itemId">
-                        <img class="d-flex mr-2 avatar-small" :src="thread.parentItem.creator.avatar">
+                        <avatar class="d-flex mr-2" size="small" :presence="thread.parentItem.creator.presence" :img-url="thread.parentItem.creator.avatar"></avatar>
                         <div class="media-body">
                           <h4 v-if="thread.parentItem.text.subject" class="mt-0 mb-1 fw4">{{thread.parentItem.text.subject}}</h4>
                           <div v-html="thread.parentItem.text.content"></div>
@@ -166,7 +161,7 @@
                             v-if="thread.comments && thread.comments.length > 0"
                             v-for="comment in thread.comments">
                             <a class="d-flex" href="#">
-                              <img class="d-flex mr-2 avatar-small" :src="comment.creator.avatar">
+                              <avatar class="d-flex mr-2" size="small" :presence="comment.creator.presence" :img-url="comment.creator.avatar"></avatar>
                             </a>
                             <div class="media-body">
                               <div v-html="comment.text.content"></div>
@@ -314,7 +309,7 @@
               <div class="entry">
                 <div class="label">Roadmap (this app)</div>
                 <ul>
-                  <li>Presence information and status message</li>
+                  <li>Status message (show and set)</li>
                   <li>Display RTC and System items in the feed</li>
                   <li>Updating conversation & items when receiving items</li>
                   <li>Replying to threads</li>
@@ -361,7 +356,7 @@
       <div id="participants-popover" class="hide">
         <div v-for="p in conversation.participantList">
           <div class="media">
-            <img class="d-flex mr-2 mb-2 avatar-small" :src="p.avatar">
+            <avatar class="d-flex mr-2 mb-2" size="small" :presence="p.presenceState" :img-url="p.avatar"></avatar>
             <div class="media-body">
               <h5 class="mt-1 mb-0 h5 fw4 ellipsis">{{p.displayName}}</h5>
               <h5 class="h5 light ellipsis subtitle">{{presenceText(p.presenceState)}}</h5>
@@ -437,7 +432,7 @@
       </div>
       <!-- TODO Popover -->
       <div id="todo-popover" class="hide">
-        <div>
+        <div ng-if="user">
           <span>TODO:</span>
         </div>
       </div>
@@ -453,10 +448,11 @@
     <script src="https://cdn.quilljs.com/1.1.10/quill.js"></script>
 
     <!-- Circuit SDK -->
-    <script src="lib/circuit.js"></script>
+    <script src="https://circuitdev.unify.com:8094/circuit.js"></script>
 
     <!-- app -->
     <script src="filters.js"></script>
+    <script src="components/avatar.js"></script>
     <script src="app.js"></script>
     <script src="injectors.js"></script>
   </body>
