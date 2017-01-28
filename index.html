@@ -47,7 +47,7 @@
       <nav id="header" class="navbar navbar-inverse bg-inverse p-1" v-show="!!system">
         <form class="form-inline mr-3 ml-2">
           <a class="navbar-text p-0" data-toggle="modal" data-target="#profileModal">
-            <avatar :presence="user && user.presence" :img-url="user && user.avatar"></avatar>
+            <c-avatar :user="user"></c-avatar>
             {{user && user.firstName}}
           </a>
           <a tabindex="1" class="nav-item ml-auto" data-toggle="modal" data-target="#infoModal">
@@ -77,8 +77,8 @@
 
                   <div v-show="!filterDisplay">
                     <div class="dropdown">
-                      <button class="btn-link pl-0" v-show="!filterDisplay" type="button" data-toggle="dropdown">
-                        <span class="fa fa-filter"></span>
+                      <button class="btn-link pl-0 mr-1" v-show="!filterDisplay" type="button" data-toggle="dropdown">
+                        <span class="fa fa-sort-amount-desc"></span>
                       </button>
                       <div class="dropdown-menu dropdown-menu-right">
                         <button class="dropdown-item btn-sm" v-for="filter in filters" v-on:click="setFilter(filter.id)" type="button">{{filter.name}}</button>
@@ -94,7 +94,7 @@
                         <button class="dropdown-item btn-sm" v-for="filter in filters" v-on:click="setFilter(filter.id)" type="button">{{filter.name}}</button>
                       </div>
                     </div>
-                    <button class="btn-link" type="button" v-show="!!filterDisplay" v-on:click="setFilter('all')">
+                    <button class="btn-link mr-1" type="button" v-show="!!filterDisplay" v-on:click="setFilter('all')">
                       <span class="fa fa-times"></span>
                     </button>
                   </div>
@@ -104,7 +104,7 @@
                 <ul class="chat">
                   <li v-for="c in filteredConversations" :key="c.convId" v-on:click="selectConversation(c)" :class="{selected: c.convId==conversation.convId, unread: c.userData 
                   && (c.userData.unreadItems > 0)}" class="left clearfix">
-                    <avatar size="large" :presence="c.peerUser && c.peerUser.presence" :img-url="c.avatar"></avatar>
+                    <c-avatar size="large" :user="c.peerUser" :conversation="c"></c-avatar>
                     <div class="chat-body clearfix">
                       <div class="header ellipsis">
                         <strong class="primary-font">{{c.title}}</strong>
@@ -128,7 +128,7 @@
 
               <!-- Conversation Header -->
               <div class="media header">
-                <avatar class="d-flex mr-3" size="large" :presence="conversation.peerUser && conversation.peerUser.presence" :img-url="conversation.avatar"></avatar>
+                <c-avatar class="d-flex mr-3" size="large" :user="conversation.peerUser" :conversation="conversation"></c-avatar>
                 <div class="media-body">
                   <h3 class="mt-1 mb-1 fw4">{{conversation.title}}</h3>
                   <div class="d-flex tabs">
@@ -152,7 +152,7 @@
                     <ul class="list-unstyled">
                       <li class="media" 
                         v-for="thread in conversation.threads" :key="thread.parentItem.itemId" v-if="thread.parentItem.type=='TEXT'" :id="thread.parentItem.itemId">
-                        <avatar class="d-flex mr-2" size="small" :presence="thread.parentItem.creator.presence" :img-url="thread.parentItem.creator.avatar"></avatar>
+                        <c-avatar class="d-flex mr-2" size="small" :user="thread.parentItem.creator"></c-avatar>
                         <div class="media-body">
                           <h4 v-if="thread.parentItem.text.subject" class="mt-0 mb-1 fw4">{{thread.parentItem.text.subject}}</h4>
                           <div v-html="thread.parentItem.text.content"></div>
@@ -161,7 +161,7 @@
                             v-if="thread.comments && thread.comments.length > 0"
                             v-for="comment in thread.comments">
                             <a class="d-flex" href="#">
-                              <avatar class="d-flex mr-2" size="small" :presence="comment.creator.presence" :img-url="comment.creator.avatar"></avatar>
+                              <c-avatar class="d-flex mr-2" size="small" :user="comment.creator"></c-avatar>
                             </a>
                             <div class="media-body">
                               <div v-html="comment.text.content"></div>
@@ -356,7 +356,7 @@
       <div id="participants-popover" class="hide">
         <div v-for="p in conversation.participantList">
           <div class="media">
-            <avatar class="d-flex mr-2 mb-2" size="small" :presence="p.presenceState" :img-url="p.avatar"></avatar>
+            <c-avatar class="d-flex mr-2 mb-2" size="small" :user="p"></c-avatar>
             <div class="media-body">
               <h5 class="mt-1 mb-0 h5 fw4 ellipsis">{{p.displayName}}</h5>
               <h5 class="h5 light ellipsis subtitle">{{presenceText(p.presenceState)}}</h5>

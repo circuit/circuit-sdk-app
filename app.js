@@ -148,6 +148,9 @@ var app = new Vue({
     data: {
         showMainEditor: false,
         conversations: [],          // Cached conversations array
+        convHT: [],                 // Cached conversation hashtable
+        telephonyConvId: null,
+        supportConvId: null,
         usersHT: {},                // Cached user hashtable
         favorites: [],              // Favorites
         muted: [],                  // Muted (aka Archived) conversations
@@ -280,10 +283,7 @@ var app = new Vue({
             client.getConversationFeed(c.convId, this.feedLoadConfig)
             // Reserve the threads
             .then(res => {
-                let idx = this.conversations.findIndex(el => {
-                    return el.convId === c.convId;
-                });
-                this.$set(this.conversations[idx], 'threads', res.threads.reverse());
+                this.$set(this.convHT[c.convId], 'threads', res.threads.reverse());
                 return c.threads = res.threads.reverse();
             })
             // Get all creatorIds
@@ -324,7 +324,7 @@ var app = new Vue({
             .then(client.getConversationParticipants.bind(null, c.convId, {pageSize: 25, includePresence: true}))
             .then(res => {
                 c.participantList = res.participants.filter(p => { 
-                    return !p.displayName.startsWith('_CMP') && !p.isDeleted;
+                    return !p.displayName.toUpperCase().startsWith('_CMP') && !p.isDeleted;
                 }).sort((a, b) => { 
                     return a.displayName.localeCompare(b.displayName);
                 });
@@ -358,12 +358,16 @@ var app = new Vue({
             .then(client.getConversations.bind(null, {numberOfConversations: 100, numberOfParticipants: 4}))
             .then(conversations => {
                 this.conversations = conversations.reverse();
+                this.conversations.forEach(c => this.convHT[c.convId] = c);
                 this.conversation = this.conversations[0];
                 this.setFilter('all');
-                this.setSystem(system);
-                this.systemLoading = false;
                 return this.processConversations(this.conversations);
             })
+            .then(_ => {
+                this.setSystem(system);
+                this.systemLoading = false
+            })
+            .then(this.filterSpecialConversations)
             .then(client.setPresence.bind(null, {state: Circuit.Enums.PresenceState.AVAILABLE}))
             .then(_ => { return client.getPresence([this.user.userId]); })
             .then(p => this.$set(this.usersHT[p[0].userId], 'presence', p[0]))
@@ -384,6 +388,10 @@ var app = new Vue({
             return new Promise((resolve, reject) => {
                 let newUserIds = [];
                 convs.forEach(c => {
+                    if (this.convHT[c.convId]) {
+                        // Conversation is already in the cache, update it instead
+                        c = this.convHT[c.convId];
+                    }
                     if (c.type === Circuit.Enums.ConversationType.DIRECT) {
                         let peerUserId = c.participants.filter(p => { 
                             return p !== client.loggedOnUser.userId;
@@ -392,12 +400,18 @@ var app = new Vue({
                             newUserIds.push(peerUserId);
                             c.peerUserId = peerUserId;
                         }
-                    } else if (c.topic || c.topicPlaceholder) {
-                        // Group conversation. Named or server-computed string
-                        // of first 5 participant firstnames
-                        c.title = c.topic || c.topicPlaceholder;
+                    } else {
+                        // Group conversation. Get first few users for the avatar
+                        // in the left pane.
+                        Array.prototype.push.apply(newUserIds, c.participants.slice(0, Math.min(c.participants.length, 4)));
                     }
                 })
+
+                // Use conversation from cache since that's the one we updated
+                convs = convs.map(c => {
+                    return this.convHT[c.convId] || c;
+                });
+
                 self.processUsers(newUserIds)
                 .then(_ => {
                     convs.forEach(c => {
@@ -408,10 +422,31 @@ var app = new Vue({
                             c.avatar = c.peerUser.avatar;
                             c.title = c.peerUser.displayName;
                         }
+                        if (c.type !== Circuit.Enums.ConversationType.DIRECT) {
+                            if (!c.hasConversationAvatar) {
+                                // Get avatars of first four users
+                                let collageAvatars = c.participants.slice(0, 4).map(p => {
+                                    let user = this.usersHT[p];
+                                    return {
+                                        avatar: user.avatar,
+                                        avatarLarge: user.avatarLarge
+                                    };
+                                });
+                                this.$set(c, 'collageAvatars', collageAvatars);
+                            }
+                            c.title = c.topic || c.topicPlaceholder || this.getFirstnames(c, 4).join(', ');
+                            
+                        }
                     });
-                    resolve();
+                    resolve(convs);
                 })
                 .catch(reject);
+            });
+        },
+        getFirstnames: function (conversation, howMany) {
+            return conversation.participants.slice(0, howMany).map(p => {
+                let user = this.usersHT[p];
+                return (user && user.firstName) || '';
             });
         },
         processUsers: function (userIds) {
@@ -437,7 +472,7 @@ var app = new Vue({
                     .then(users => {
                         console.log(`Retrieved ${users.length} users from server`);
                         users.forEach(user => this.$set(this.usersHT, user.userId, user));
-                        existingUsers.push.apply(existingUsers, users);
+                        Array.prototype.push.apply(existingUsers, users);
                     })
                     .then(client.getPresence.bind(null, newUserIds))
                     .then(presence => {
@@ -457,6 +492,18 @@ var app = new Vue({
                 } else {
                     resolve(existingUsers);
                 }
+            });
+        },
+        filterSpecialConversations: function () {
+            return new Promise((resolve, reject) => {
+                let promises = [];
+                promises.push(client.getTelephonyConversationId());
+                promises.push(client.getSupportConversationId());
+                Promise.all(promises)
+                .then(res => {
+                    [this.telephonyConvId, this.supportConvId] = res;
+                })
+                .catch(reject)
             });
         },
         startThread: function () {
@@ -526,7 +573,9 @@ var app = new Vue({
                 this.filteredConversations = this.conversations.filter(function (c) {return c.type === 'GROUP' || c.type === 'COMMUNITY';});
                 break;
                 case 'favorites':
-                this.retrieveFavorites().then(c => { this.filteredConversations = c; });
+                this.retrieveFavorites().then(c => {
+                    this.filteredConversations = c;
+                });
                 break;
                 case 'muted':
                 this.retrieveMutedConversations().then(c => { this.filteredConversations = c; });
@@ -551,7 +600,9 @@ var app = new Vue({
             .then(favs => {
                 let promises = [];
                 favs && favs.forEach(convId => promises.push(client.getConversationById(convId)));
-                return Promise.all(promises);
+
+                return Promise.all(promises)
+                .then(this.processConversations);
             });
         },
         retrieveMutedConversations: function () {
@@ -560,7 +611,8 @@ var app = new Vue({
             .then(muted => {
                 let promises = [];
                 muted && muted.forEach(convId => promises.push(client.getConversationById(convId)));
-                return Promise.all(promises);
+                return Promise.all(promises)
+                .then(this.processConversations);
             });
         },
         retrieveFlagged: function () {
@@ -574,12 +626,14 @@ var app = new Vue({
                 flaggedConvs
                 .map(obj => { return obj.conversationId; })
                 .forEach(convId => promises.push(client.getConversationById(convId)));
-                return Promise.all(promises);
+                return Promise.all(promises)
+                .then(this.processConversations);
             });
         },
         clearCache: function () {
-            this.users = {};
+            this.usersHT = {};
             this.conversations = [];
+            this.convHT = {};
             this.favorites = [];
             this.muted = [];
             this.flagged = [];

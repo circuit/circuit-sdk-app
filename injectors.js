@@ -8,6 +8,7 @@ Circuit.Injectors.conversationInjector = conv => {
         isModerationAllowed: undefined
     };
     conv.isGuestAccessEnabled = !conv.isGuestAccessDisabled;
+    conv.hasGroupAvatar = !!(conv.conversationAvatar && conv.conversationAvatar.largePictureId);
 }
 
 
