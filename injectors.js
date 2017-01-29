@@ -9,6 +9,7 @@ Circuit.Injectors.conversationInjector = conv => {
     };
     conv.isGuestAccessEnabled = !conv.isGuestAccessDisabled;
     conv.hasGroupAvatar = !!(conv.conversationAvatar && conv.conversationAvatar.largePictureId);
+    conv.userData = conv.userData || {};
 }
 
 

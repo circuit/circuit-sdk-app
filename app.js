@@ -159,7 +159,6 @@ var app = new Vue({
         conversation: {
             dialInDetails: {}
         },           // Selected conversation
-        threads: [],                // Threads of selected conversation
         user: {},                   // Logged on user
         systems: [                  // Supported systems
             {domain: 'circuitsandbox.net', name: 'Sandbox', client_id: '06f08f1efbfc4f6d96f086a3677fad0f'},
@@ -254,33 +253,96 @@ var app = new Vue({
 
     watch: {
         conversation: function (val) {
+        }
+    },
+
+    methods: {
+        init: function (system) {
             let self = this;
-            let c = val;
+            // Show landing page
+            this.clearSystem();
+            this.systemLoading = true;
+            this.connectingSystem = system.name;
 
-            // Hide editor until feed is rendered
-            self.showMainEditor = false;
+            return client.logon()
+            .then(user => {
+                console.log(`Successfully authenticated as ${user.displayName}`);
+                user.presence = user.userPresenceState;
+                this.user = user;
+                this.$set(this.usersHT, user.userId, user);
+            })
+            .then(this.addEventListeners)
+            .then(_ => client.subscribePresence.bind(null, [self.user.userId]))
+            .then(client.getConversations.bind(null, {numberOfConversations: 100, numberOfParticipants: 4}))
+            .then(conversations => {
+                this.conversations = conversations.reverse();
+                this.conversations.forEach(c => this.convHT[c.convId] = c);
+                this.conversation = this.conversations[0];
+                this.setFilter('all');
+                return this.conversations;
+            })
+            .then(this.processConversations)
+            .then(conversations => {
+                this.selectConversation(conversations[0])
+                this.setSystem(system);
+                this.systemLoading = false;
+            })
+            .then(this.filterSpecialConversations)
+            .then(client.setPresence.bind(null, {state: Circuit.Enums.PresenceState.AVAILABLE}))
+            .then(_ => { return client.getPresence([this.user.userId]); })
+            .then(p => this.$set(this.usersHT[p[0].userId], 'presence', p[0]))
+            .catch(_ => this.systemLoading = false);
+        },
+        addEventListeners: function () {
+            client.addEventListener('userPresenceChanged', evt => {
+                let user = this.usersHT[evt.presenceState.userId];
+                if (user) {
+                    this.$set(user, 'presence', evt.presenceState);
+                }
+            });
 
-            // Different conversation is being selected. If not already
-            // processed, fetch new users and add them to a hashtable
-            // and to conversation.otherUsers
-            if (!c.convId) {
+            client.addEventListener('itemAdded', this.handleItem);
+            client.addEventListener('itemUpdated', this.handleItem);
+
+            client.addEventListener('conversationUpdated', evt => {
+                let c = evt.conversation;
+            });
+        },
+        handleItem: function (evt) {
+            // If the item is for the selected conversation, then
+            // update it. Otherwise mark the conversation as dirty
+            // so the next time it is loaded the conversation is
+            // fetched again. This is not the best solution performance
+            // or bandwidth wise, but will do for this example app.
+            let item = evt.item;
+            let c = this.convHT[item.convId];
+            if (!c) {
                 return;
             }
-
-            // Clear editor. No support for drafts.
-            mainEditor.setText('');
-            subjectEditor.setText('');
-
-            if (c.processed) {
-                self.scrollToBottom();
-                return;
+            if (this.conversation.convId === item.convId) {
+                this.retrieveConversationFeed(c);
+            } else {
+                c.dirty = true;
             }
 
-            console.log(`Processing new conversation ${val.convId}`);
-            c.processed = true;
-
-            // Fetch conversation threads with some items each
-            client.getConversationFeed(c.convId, this.feedLoadConfig)
+            if (evt.type === 'itemAdded') {
+                // Update topLevelItem
+                c.topLevelItem = item;
+                c.userData.unreadItems++;
+                c.lastItemModificationTime = item.modificationTime;
+                this.sortConversations();
+            }
+        },
+        sortConversations: function () {
+            this.conversations = this.conversations.sort((a, b) => { 
+                return b.topLevelItem.creationTime - a.topLevelItem.creationTime;
+            });
+        },
+        // Fetch most recent conversation threads with a few items each,
+        // reverse the threads and process any new creators.
+        retrieveConversationFeed: function (c) {
+            let self = this;
+            return client.getConversationFeed(c.convId, this.feedLoadConfig)
             // Reserve the threads
             .then(res => {
                 this.$set(this.convHT[c.convId], 'threads', res.threads.reverse());
@@ -318,68 +380,7 @@ var app = new Vue({
                 });
                 console.log(`Loaded ${users.length} users for conversation ${c.convId} when loading its items.`);
             })
-            // Fetch the first 25 conversation participants so these are ready
-            // when opening the participants popover. GetUsersById is less performant
-            // than this API and does not support filtering.
-            .then(client.getConversationParticipants.bind(null, c.convId, {pageSize: 25, includePresence: true}))
-            .then(res => {
-                c.participantList = res.participants.filter(p => { 
-                    return !p.displayName.toUpperCase().startsWith('_CMP') && !p.isDeleted;
-                }).sort((a, b) => { 
-                    return a.displayName.localeCompare(b.displayName);
-                });
-            })
-            // Get Dial-in details for Schedule popover
-            .then(client.getConversationDetails.bind(null, c.convId))
-            .then(dialInDetails => {
-                c.dialInDetails = dialInDetails
-            })
-            .catch(console.error);
-        }
-    },
-
-    methods: {
-        init: function (system) {
-            let self = this;
-            // Show landing page
-            this.clearSystem();
-            this.systemLoading = true;
-            this.connectingSystem = system.name;
-
-            return client.logon()
-            .then(user => {
-                console.log(`Successfully authenticated as ${user.displayName}`);
-                user.presence = user.userPresenceState;
-                this.user = user;
-                this.$set(this.usersHT, user.userId, user);
-            })
-            .then(this.addEventListeners)
-            .then(_ => client.subscribePresence.bind(null, [self.user.userId]))
-            .then(client.getConversations.bind(null, {numberOfConversations: 100, numberOfParticipants: 4}))
-            .then(conversations => {
-                this.conversations = conversations.reverse();
-                this.conversations.forEach(c => this.convHT[c.convId] = c);
-                this.conversation = this.conversations[0];
-                this.setFilter('all');
-                return this.processConversations(this.conversations);
-            })
-            .then(_ => {
-                this.setSystem(system);
-                this.systemLoading = false
-            })
-            .then(this.filterSpecialConversations)
-            .then(client.setPresence.bind(null, {state: Circuit.Enums.PresenceState.AVAILABLE}))
-            .then(_ => { return client.getPresence([this.user.userId]); })
-            .then(p => this.$set(this.usersHT[p[0].userId], 'presence', p[0]))
-            .catch(_ => this.systemLoading = false);
-        },
-        addEventListeners: function () {
-            client.addEventListener('userPresenceChanged', data => {
-                let user = this.usersHT[data.presenceState.userId];
-                if (user) {
-                    this.$set(user, 'presence', data.presenceState);
-                }
-            });
+            .then(_ => c.dirty = false);
         },
         processConversations: function (convs) {
             let self = this;
@@ -502,6 +503,7 @@ var app = new Vue({
                 Promise.all(promises)
                 .then(res => {
                     [this.telephonyConvId, this.supportConvId] = res;
+                    resolve(res);
                 })
                 .catch(reject)
             });
@@ -591,8 +593,49 @@ var app = new Vue({
             return conversations;
         },
         selectConversation: function (c) {
-            this.threads = [];
             this.conversation = c;
+
+            // Hide editor until feed is rendered
+            this.showMainEditor = false;
+
+            // Different conversation is being selected. If not already
+            // processed, fetch new users and add them to a hashtable
+            // and to conversation.otherUsers
+            if (!c.convId) {
+                return;
+            }
+
+            // Clear editor. No support for drafts.
+            mainEditor.setText('');
+            subjectEditor.setText('');
+
+            if (c.processed && !c.dirty) {
+                this.scrollToBottom();
+                return;
+            }
+
+            console.log(`Processing new conversation ${c.convId}`);
+            
+            return this.retrieveConversationFeed(c)
+            // Fetch the first 25 conversation participants so these are ready
+            // when opening the participants popover. GetUsersById is less performant
+            // than this API and does not support filtering.
+            .then(client.getConversationParticipants.bind(null, c.convId, {pageSize: 25, includePresence: true}))
+            .then(res => {
+                c.participantList = res.participants.filter(p => { 
+                    return !p.displayName.toUpperCase().startsWith('_CMP') && !p.isDeleted;
+                }).sort((a, b) => { 
+                    return a.displayName.localeCompare(b.displayName);
+                });
+            })
+            // Get Dial-in details for Schedule popover
+            .then(client.getConversationDetails.bind(null, c.convId))
+            .then(dialInDetails => {
+                c.dialInDetails = dialInDetails;
+                c.dirty = false;
+                c.processed = true;
+            })
+            .catch(console.error);
         },
         retrieveFavorites: function () {
             return client.getMarkedConversations()
@@ -638,7 +681,6 @@ var app = new Vue({
             this.muted = [];
             this.flagged = [];
             this.conversation = {};
-            this.threads = [];
             this.user = null;
         },
         closePopover: function (e) {

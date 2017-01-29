@@ -102,8 +102,7 @@
 
                 <!-- Conversations -->
                 <ul class="chat">
-                  <li v-for="c in filteredConversations" :key="c.convId" v-on:click="selectConversation(c)" :class="{selected: c.convId==conversation.convId, unread: c.userData 
-                  && (c.userData.unreadItems > 0)}" class="left clearfix">
+                  <li v-for="c in filteredConversations" :key="c.convId" v-on:click="selectConversation(c)" :class="{selected: c.convId==conversation.convId, unread: c.userData.unreadItems>0}" class="left clearfix">
                     <c-avatar size="large" :user="c.peerUser" :conversation="c"></c-avatar>
                     <div class="chat-body clearfix">
                       <div class="header ellipsis">
