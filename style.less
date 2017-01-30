@@ -396,6 +396,7 @@ button:hover {
     }
 
     .media-body {
+      margin-left: 5px;
       hr {
         margin-top: 8px;
         margin-bottom: 0;
@@ -412,6 +413,9 @@ button:hover {
         &:hover {
           color: @darkGreen;
         }
+      }
+      p {
+        margin-bottom: 5px;
       }
     }
   }
@@ -586,47 +590,48 @@ button:hover {
   min-height: 41px;
 }
 
-/* Editor */
-#content-container, #subject-content-container {
-  padding: 0 10px 0 20px;
-}
-#content-container {
-  height: auto;
-
-  #editor-container {
-    min-height: 80px;
+/* Main Editor */
+.main-editor-component {
+  >div {
+    padding: 0 10px 0 20px;  
   }
-  .ql-snow.ql-toolbar {
-    border: none;
-    button.send {
-      float: right;
-      width: auto;
-      font-size: 13px;
-      border-color: #0275d8;
-      border: 1px solid #0275d8;
-      border-radius: .25rem;
+  .subject-editor {
+    .editor {
+      font-weight: 600;
+      border-bottom: none;
     }
-    button.send:hover {
-      color: #fff;
-      background-color: #0275d8;
-      border-color: #0275d8;
+  }
+  .content-editor {
+    height: auto;
+
+    .editor {
+      min-height: 80px;
     }
-  } 
-  .ql-editor {
-    overflow-y: visible; 
+    .ql-snow.ql-toolbar {
+      border: none;
+      button.send {
+        float: right;
+        width: auto;
+        font-size: 13px;
+        border-color: #0275d8;
+        border: 1px solid #0275d8;
+        border-radius: .25rem;
+      }
+      button.send:hover {
+        color: #fff;
+        background-color: #0275d8;
+        border-color: #0275d8;
+      }
+    } 
+    .ql-editor {
+      overflow-y: visible; 
+    }
   }
 }
 
-#subject-content-container {
-  #subject-editor-container {
-    font-weight: 500;
-    border-bottom: none;
-  }
-  #subject-toolbar-container {
-    display: none !important;
-  }
+.ql-editor.ql-blank::before {
+  opacity: 0.7;
 }
-
 
 /******************************/
 /* Avatar                     */
@@ -704,3 +709,14 @@ button:hover {
     }
   }
 }
+
+
+.prettyprint {
+  background-color: #f0f0f0;
+  white-space: pre-wrap;
+  margin-bottom: 5px;
+  margin-top: 5px;
+  padding: 5px 10px;
+  border-radius: 3px;
+}
+

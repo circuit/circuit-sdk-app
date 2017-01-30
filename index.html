@@ -8,6 +8,7 @@
     <meta name="author" content="Roger Urscheler">
     <link rel="icon" href="logo-circuit-js.png">
     <title>Circuit SDK App</title>
+    <link rel="stylesheet" href="https://jmblog.github.io/color-themes-for-google-code-prettify/themes/github.min.css" />
     <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css">
     <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0-alpha.6/css/bootstrap.min.css">
     <link href="https://cdn.quilljs.com/1.1.10/quill.snow.css" rel="stylesheet">
@@ -113,7 +114,7 @@
                       </div>
                       <div class="info">
                         <small class="pull-right text-muted timestamp" v-if="!selectedFilter || selectedFilter.id!=='favorites'">
-                          <span class="fa fa-clock-o"></span>{{c.topLevelItem.creationTime | time}}
+                          {{c.topLevelItem.creationTime | time}}
                         </small>
                       </div>
                     </div>
@@ -122,7 +123,7 @@
               </div>
             </div>
 
-            <!-- Main Content -->
+            <!-- Right Pane -->
             <div class="main">
 
               <!-- Conversation Header -->
@@ -131,72 +132,41 @@
                 <div class="media-body">
                   <h3 class="mt-1 mb-1 fw4">{{conversation.title}}</h3>
                   <div class="d-flex tabs">
-                    <button v-show="showParticipantsTab" class="btn btn-sm btn-link participants">{{conversation.participants && conversation.participants.length}} Member<span v-if="conversation.participants && conversation.participants.length > 1">s</span></button>
+                    <button v-show="showParticipantsTab" class="btn btn-sm btn-link participants-popover-trigger  backdrop-close">{{conversation.participants && conversation.participants.length}} Member<span v-if="conversation.participants && conversation.participants.length > 1">s</span></button>
                     <span v-show="showParticipantsTab" class="middot">&middot;</span>
-                    <button class="btn btn-sm btn-link details">Details</button>
+                    <button class="btn btn-sm btn-link details-popover-trigger backdrop-close">Details</button>
                     <span class="middot">&middot;</span>
-                    <button v-show="conversation.type=='GROUP'" class="btn btn-sm btn-link schedule">Schedule</button>
+                    <button v-show="conversation.type=='GROUP'" class="btn btn-sm btn-link schedule-popover-trigger backdrop-close">Schedule</button>
                     <span v-show="conversation.type=='GROUP'" class="middot">&middot;</span>
-                    <button class="btn btn-sm btn-link files">Files</button>
+                    <button class="btn btn-sm btn-link files-popover-trigger backdrop-close">Files</button>
                   </div>
                 </div>
               </div>
 
-              <!-- Conversation Feed -->
+              <!-- Content -->
               <div class="content">
                 <div class="row">
 
-                  <!-- Left -->
+                  <!-- Conversation Feed -->
                   <div class="col-8">
+
+                    <!-- Feed List -->
                     <ul class="list-unstyled">
-                      <li class="media" 
-                        v-for="thread in conversation.threads" :key="thread.parentItem.itemId" v-if="thread.parentItem.type=='TEXT'" :id="thread.parentItem.itemId">
-                        <c-avatar class="d-flex mr-2" size="small" :user="thread.parentItem.creator"></c-avatar>
-                        <div class="media-body">
-                          <h4 v-if="thread.parentItem.text.subject" class="mt-0 mb-1 fw4">{{thread.parentItem.text.subject}}</h4>
-                          <div v-html="thread.parentItem.text.content"></div>
-
-                          <div class="media mt-3"
-                            v-if="thread.comments && thread.comments.length > 0"
-                            v-for="comment in thread.comments">
-                            <a class="d-flex" href="#">
-                              <c-avatar class="d-flex mr-2" size="small" :user="comment.creator"></c-avatar>
-                            </a>
-                            <div class="media-body">
-                              <div v-html="comment.text.content"></div>
-                            </div>
-                          </div>
-
-                          <button class="btn btn-link btn-sm reply">Reply to thread</button>
-
-                        </div>
-                      </li>
+                      <template v-for="thread in conversation.threads">
+                        <c-thread :thread="thread" v-if="thread.parentItem.type=='TEXT'"></c-thread>
+                      </template>
                     </ul>
 
                     <!-- Main editor -->
-                    <div id="mainEditor" v-show="showMainEditor">
-                      <div id="subject-content-container">
-                        <div id="subject-editor-container"></div>
-                        <div id="subject-toolbar-container"></div>
-                      </div>
-                      <div id="content-container">
-                        <div id="editor-container"></div>
-                        <div id="toolbar-container">
-                          <button class="ql-bold" data-toggle="tooltip" data-placement="top" title="Bold"></button>
-                          <button class="ql-italic" data-toggle="tooltip" data-placement="top" title="Italic"></button>
-                          <button class="ql-list" value="bullet" data-toggle="tooltip" data-placement="top" title="Bullet List"></button>
-                          <button class="ql-list" value="ordered" data-toggle="tooltip" data-placement="top" title="Ordered List"></button>
-                          <button class="ql-image ml-3" data-toggle="tooltip" data-placement="top" title="Upload file"></button>
-                          <button class="ql-link" data-toggle="tooltip" data-placement="top" title="Insert link"></button>
-                          <button class="ql-clean ml-3" data-toggle="tooltip" data-placement="top" title="Remove formatting"></button>
-                          <button type="button" class="btn btn-sm btn-outline-primary send" v-on:click="startThread">Start new thread</button>
-                        </div>
-                      </div>
-                    </div>
+                    <c-main-editor ref="mainEditor"
+                      v-show="showMainEditor"
+                      v-on:start-thread="startThread"
+                      v-on:scroll-feed="scrollFeed">
+                    </c-main-editor>
 
-                  </div><!-- Left -->
+                  </div><!-- Conversation Feed -->
 
-                  <!-- Right -->
+                  <!-- Thread Shortcout -->
                   <div class="col-4 thread-shortcuts">
                     <div class="h5 fixed ml-3 title fw4">Thread shortcuts</div>
                     <nav class="bs-docs-sidebar">
@@ -206,12 +176,12 @@
                         </li>
                       </ul>
                     </nav>
-                  </div> <!-- Right -->
+                  </div> <!-- Thread Shortcout -->
 
                 </div>
 
-              </div> <!-- Conversation Feed -->
-            </div> <!-- Main Content -->
+              </div> <!-- Content -->
+            </div> <!-- Right Pane -->
           </div>
         </div>
       </transition>
@@ -247,204 +217,27 @@
         </div>
       </div>
 
-      <!-- Notifications Modal -->
-      <div class="modal right fade" id="notificationsModal" tabindex="-1" role="dialog">
-        <div class="modal-dialog" role="document">
-          <div class="modal-content">
-            <div class="modal-header py-2 px-3">
-              <h4 class="modal-title">Notifications</h4>
-              <button type="button" class="close" data-dismiss="modal"><span>&times;</span></button>
-            </div>
-            <div class="modal-body">
-              <p>
-              Show mentions and other notifications (todo)<br>
-              </p>
-            </div>
-          </div>
-        </div>
-      </div>
+      <!-- Import Modals -->
+      <c-notification-modal></c-notification-modal>
+      <c-search-modal></c-search-modal>
+      <c-info-modal></c-info-modal>
 
-      <!-- Search Modal -->
-      <div class="modal right fade search" id="searchModal" tabindex="-1" role="dialog">
-        <div class="modal-dialog" role="document">
-          <div class="modal-content">
-            <div class="modal-header py-2 px-3">
-              <h4 class="modal-title">Search</h4>
-              <button type="button" class="close" data-dismiss="modal"><span>&times;</span></button>
-            </div>
-            <div class="modal-body">
-              <p>
-              Search input and results (todo)<br>
-              </p>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Info Modal -->
-      <div class="modal right fade search" id="infoModal" tabindex="-1" role="dialog">
-        <div class="modal-dialog" role="document">
-          <div class="modal-content">
-            <div class="modal-header py-2 px-3">
-              <h4 class="modal-title">About this app</h4>
-              <button type="button" class="close" data-dismiss="modal"><span>&times;</span></button>
-            </div>
-            <div class="modal-body">
-              <div class="entry">This app is intended to showcase the capabilities of the <a href="https://circuit.github.io/jssdk">Circuit JavaScript SDK</a>. The source code is available on <a href="https://github.com/circuit/circuit-sdk-app">github</a>. 
-              </div>
-
-              <div class="entry">
-                For more information on the SDK check out these links:
-                <ul>
-                  <li><a href="Register a sandbox account">https://www.circuit.com/web/developers/registration</a></li>
-                  <li><a href="Register an OAuth 2.0 app">https://circuit.github.io/oauth.html</a></li>
-                  <li><a href="JS SDK examples">https://circuit.github.io/jssdk.html</a></li>
-                  <li><a href="Official Circuit github site">https://github.com/circuit</a></li>
-                  <li><a href="JavaScript SDK API documentation ">https://circuitsandbox.net/sdk</a></li>
-                  <li><a href="REST API ">https://circuit.github.io/rest.html</a></li>
-                </ul>
-              </div>
-
-              <div class="entry">
-                <div class="label">Roadmap (this app)</div>
-                <ul>
-                  <li>Status message (show and set)</li>
-                  <li>Display RTC and System items in the feed</li>
-                  <li>Updating conversation & items when receiving items</li>
-                  <li>Replying to threads</li>
-                  <li>Creating conversations</li>
-                  <li>Enhance feed with timestamp, creator, like, flag, etc</li>
-                  <li>Add call capabilities (voice, video & screenshare)</li>
-                  <li>Load more (conversations, items, participants, etc)</li>
-                  <li>Mentions</li>
-                  <li>Labels</li>
-                  <li>Show and update of profile information</li>
-                  <li>Search</li>
-                  <li>Editing of text messages</li>
-                  <li>Telephony (ATC/UTC)</li>
-                  <li>Use vue.js component functionality</li>
-                </ul>
-              </div>
-
-              <div class="entry">
-                <div class="label">Third-party libraries</div>
-                <ul>
-                  <li><a href="https://circuit.github.io/jssdk.html">Circuit JS SDK</a></li>
-                  <li><a href="https://vuejs.org/">Vue.js JavaScript Framework</a></li>
-                  <li><a href="https://v4-alpha.getbootstrap.com/">Bootstrap v4-alpha</a></li>
-                  <li><a href="https://quilljs.com">Quill Rich Text Editor</a></li>
-                  <li><a href="http://fontawesome.io/">Font Awesome icons</a></li>
-                  <li><a href="http://tether.io/">Tether positioning</a></li>
-                  <li><a href="https://jquery.com/">JQuery</a></li>
-                  <li><a href="https://momentjs.com/">Moment.js for date formatting</a></li>
-                  <li><a href="http://lesscss.org/">LESS CSS pre-processor</a></li>
-                </ul>
-              </div>
-
-              <div class="entry">
-                <div class="label">Feedback</div>
-                <div>Contact Roger Urscheler via <a href="https://eu.yourcircuit.com/#/email/rodrigo.pastro@unify.com">Circuit</a> or <a href="mailto:roger.urscheler@unify.com">email</a>.</div>
-              </div>
-
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Participants Popover -->
-      <div id="participants-popover" class="hide">
-        <div v-for="p in conversation.participantList">
-          <div class="media">
-            <c-avatar class="d-flex mr-2 mb-2" size="small" :user="p"></c-avatar>
-            <div class="media-body">
-              <h5 class="mt-1 mb-0 h5 fw4 ellipsis">{{p.displayName}}</h5>
-              <h5 class="h5 light ellipsis subtitle">{{presenceText(p.presenceState)}}</h5>
-            </div>
-          </div>
-        </div>
-        <div v-if="conversation.participants && conversation.participants.length > 25" class="d-flex justify-content-center">
-          <small>Load more (todo)</small>
-        </div>
-      </div>
-
-      <!-- Details Popover -->
-      <div id="details-popover" class="hide">
-        <div class="small" v-if="conversation.type=='COMMUNITY'">
-          <div class="entry">
-            <div class="label">Description:</div>
-            <div>{{conversation.description}}</div>
-          </div>
-        </div>
-        <div class="small" v-if="conversation.dialInDetails && conversation.type=='GROUP'">
-          <div class="form-check" :disabled="!moderationEnabled" v-if="conversation.dialInDetails.isModerationAllowed">
-            <label class="form-check-label">
-              <input class="form-check-input" type="checkbox" v-model="conversation.isModerated" :disabled="!moderationEnabled"><span class="chk-label">Moderated</span>
-            </label>
-          </div>
-          <div class="form-check">
-            <label class="form-check-label">
-              <input class="form-check-input" type="checkbox" v-model="conversation.isGuestAccessEnabled"><span class="chk-label">Guest Access Enabled</span>
-            </label>
-          </div>
-        </div>
-        <div class="small" v-if="conversation.type=='DIRECT' && conversation.peerUser">
-          <div class="entry" v-if="conversation.peerUser.company">
-            <div class="label">Company:</div>
-            <div>{{conversation.peerUser.company}}</div>
-          </div>
-          <div class="entry" v-if="conversation.peerUser.jobTitle">
-            <div class="label">Company:</div>
-            <div>{{conversation.peerUser.jobTitle}}</div>
-          </div>
-          <div class="entry" v-if="conversation.peerUser.phoneNumbers">
-            <div v-for="phone in conversation.peerUser.phoneNumbers">
-              <div class="label">{{phone.type.toTitleCase()}}:</div><span>{{phone.phoneNumber}}</span>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Schdeule Popover -->
-      <div id="schedule-popover" class="hide">
-        <div v-if="conversation.dialInDetails" class="small">
-          <div class="entry">
-            <div class="label">Guest Link:</div>
-            <a :href="conversation.dialInDetails.link">{{conversation.dialInDetails.link}}</a>
-          </div>
-          <div class="entry">
-            <div class="label">Bridge nunmbers:</div>
-            <div v-for="bridge in conversation.dialInDetails.bridgeNumbers">
-              <span>{{bridge.name || bridge.country}}: {{bridge.bridgeNumber}}</span>
-            </div>
-          </div>
-          <div class="entry">
-            <span class="label">Pin:</span><span>{{conversation.dialInDetails.pin}}</span>
-          </div>
-          <!--
-          <div class="entry">
-            <span class="label">Moderation Allowed:</span><span>{{conversation.dialInDetails.isModerationAllowed}}</span>
-          </div>
-          <div>
-            <span class="label">Recording Allowed:</span><span>{{conversation.dialInDetails.isRecordingAllowed}}</span>
-          </div> -->
-        </div>
-      </div>
-      <!-- TODO Popover -->
-      <div id="todo-popover" class="hide">
-        <div ng-if="user">
-          <span>TODO:</span>
-        </div>
-      </div>
+      <!-- Import Popovers -->
+      <c-participants-popover :conversation="conversation"></c-participants-popover>
+      <c-details-popover :conversation="conversation"></c-details-popover>
+      <c-schedule-popover :conversation="conversation"></c-schedule-popover>
+      <c-files-popover :conversation="conversation"></c-files-popover>
 
     </div>
 
-    <!-- Bootstrap core JavaScript files -->
+    <!-- 3rd party JS files -->
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.0.0/jquery.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/tether/1.2.0/js/tether.min.js"></script>
     <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0-alpha.6/js/bootstrap.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.17.1/moment.min.js"></script>
     <script src="//cdnjs.cloudflare.com/ajax/libs/less.js/2.7.1/less.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.17.1/moment.min.js"></script>
     <script src="https://cdn.quilljs.com/1.1.10/quill.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prettify/r298/prettify.min.js"></script>
 
     <!-- Circuit SDK -->
     <script src="lib/circuit.js"></script>
@@ -452,6 +245,16 @@
     <!-- app -->
     <script src="filters.js"></script>
     <script src="components/avatar.js"></script>
+    <script src="components/textItem.js"></script>
+    <script src="components/thread.js"></script>
+    <script src="components/mainEditor.js"></script>
+    <script src="components/infoModal.js"></script>
+    <script src="components/searchModal.js"></script>
+    <script src="components/notificationModal.js"></script>
+    <script src="components/participantsPopover.js"></script>
+    <script src="components/detailsPopover.js"></script>
+    <script src="components/schedulePopover.js"></script>
+    <script src="components/filesPopover.js"></script>
     <script src="app.js"></script>
     <script src="injectors.js"></script>
     

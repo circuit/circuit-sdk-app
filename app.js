@@ -5,141 +5,29 @@ $(document).ready(function() {
         delay: { show: 1000, hide: 100 }
     });
 
+    // Close popovers on backdrop click
     $(document).on('click', function (e) {
-        $('.participants, .details, .schedule, .files').each(function () {
+//        $('.participants-popover-trigger, .details-popover-trigger, .schedule-popover-trigger, .files-popover-trigger').each(function () {
+        $('.backdrop-close').each(function () {
             if (!$(this).is(e.target) && $(this).has(e.target).length === 0 && $('.popover').has(e.target).length === 0) {                
                 (($(this).popover('hide').data('bs.popover') || {}).inState || {}).click = false;
             }
         });
     });
 
-    window.subjectEditor = new Quill('#subject-editor-container', {
-        modules: {
-            toolbar: '#subject-toolbar-container'
-        },
-        placeholder: 'Thread title',
-        theme: 'snow'
-    });
-
-    var bindings = {
-        // Add new 'enter' binding and propagate to quill
-        enter: {
-            key: 13,
-            handler: function() {
-                var elContent = document.querySelector('.main .content');
-                window.requestAnimationFrame(_ => elContent.scrollTop = elContent.scrollHeight);
-                return true;
-            }
-        }
-    };
-
-    window.mainEditor = new Quill('#editor-container', {
-        modules: {
-            toolbar: '#toolbar-container',
-            keyboard: {
-                bindings: bindings
-            }
-        },
-        placeholder: '',
-        theme: 'snow'
-    });
-    var toolbar = window.mainEditor.getModule('toolbar');
-    toolbar.addHandler('link', function (value) {
-        if (value) {
-            var href = prompt('Enter the URL');
-            this.quill.format('link', href);
-        }
-    });
-
-    $('.participants').popover({
-        placement: 'bottom',
-        offset: '2 0',
-        trigger: 'click',
-        html: true,
-        container: '#app',
-        template: `
-            <div class="popover" role="tooltip" style="width: 250px">
-                <div class="arrow"></div>
-                <h3 class="popover-title"></h3>
-                <div class="popover-content" style="max-height: 450px">
-                    <div class="data-content"></div>
-                </div>
-            </div>`,
-        content: $('#participants-popover')
-    }).on('show.bs.popover', function() {
-        $('#participants-popover').addClass('show');
-    }).on('hide.bs.popover', function() {
-        $('#participants-popover').addClass('hide');
-    });
-
-
-    $('.details').popover({
-        placement: 'bottom',
-        offset: '2 0',
-        trigger: 'click',
-        html: true,
-        container: '#app',
-        template: `
-            <div class="popover" role="tooltip" style="width: 350px; max-width: 350px">
-                <div class="arrow"></div>
-                <h3 class="popover-title"></h3>
-                <div class="popover-content" style="max-height: 450px">
-                    <div class="data-content"></div>
-                </div>
-            </div>`,
-        content: $('#details-popover')
-    }).on('show.bs.popover', function() {
-        $('#details-popover').addClass('show');
-    }).on('hide.bs.popover', function() {
-        $('#details-popover').addClass('hide');
-    });
-
-    $('.schedule').popover({
-        placement: 'bottom',
-        offset: '2 0',
-        trigger: 'click',
-        html: true,
-        container: '#app',
-        template: `
-            <div class="popover" role="tooltip" style="width: 550px; max-width: 550px">
-                <div class="arrow"></div>
-                <h3 class="popover-title"></h3>
-                <div class="popover-content" style="max-height: 450px">
-                    <div class="data-content"></div>
-                </div>
-            </div>`,
-        content: $('#schedule-popover')
-    }).on('show.bs.popover', function() {
-        $('#schedule-popover').addClass('show');
-    }).on('hide.bs.popover', function() {
-        $('#schedule-popover').addClass('hide');
-    });
-
-    $('.files').popover({
-        placement: 'bottom',
-        offset: '2 0',
-        trigger: 'click',
-        html: true,
-        container: '#app',
-        template: `
-            <div class="popover" role="tooltip" style="width: 250px">
-                <div class="arrow"></div>
-                <h3 class="popover-title"></h3>
-                <div class="popover-content" style="max-height: 450px">
-                    <div class="data-content"></div>
-                </div>
-            </div>`,
-        content: $('#todo-popover')
-    }).on('show.bs.popover', function() {
-        $('#todo-popover').addClass('show');
-    }).on('hide.bs.popover', function() {
-        $('#todo-popover').addClass('hide');
-    });
 
 });
 
 // Circuit client instance
 var client = null;
+
+var config = {
+    feedLoad: {
+        commentsPerThread: 10,
+        minTotalItems: 100,
+        maxUnreadPerThread: 100
+    }
+};
 
 // App
 var app = new Vue({
@@ -189,11 +77,6 @@ var app = new Vue({
             id: 'muted',
             name: 'Archived Conversations'
         }],
-        feedLoadConfig: {
-            commentsPerThread: 10,
-            minTotalItems: 100,
-            maxUnreadPerThread: 100
-        },
         selectedFilter: null        // Selected conversation selector filter
     },
 
@@ -232,6 +115,7 @@ var app = new Vue({
         }
     },
     updated: function () {
+        prettyPrint();
     },
     computed: {
         filterDisplay: function () {
@@ -239,15 +123,6 @@ var app = new Vue({
         },
         showParticipantsTab: function () {
             return this.conversation.participants && this.conversation.type !== 'DIRECT';
-        },
-        moderationEnabled: function () {
-            let self = this;
-            if (!this.conversation.moderators) {
-                return false;
-            }
-            return this.conversation.moderators.some(function (elem) {
-                return elem.userId === self.user.userId;
-            });
         }
     },
 
@@ -257,6 +132,11 @@ var app = new Vue({
     },
 
     methods: {
+        test: function () {
+            client.revokeToken()
+            .then(console.log)
+            .catch(console.error)
+        },
         init: function (system) {
             let self = this;
             // Show landing page
@@ -342,7 +222,7 @@ var app = new Vue({
         // reverse the threads and process any new creators.
         retrieveConversationFeed: function (c) {
             let self = this;
-            return client.getConversationFeed(c.convId, this.feedLoadConfig)
+            return client.getConversationFeed(c.convId, config.feedLoad)
             // Reserve the threads
             .then(res => {
                 this.$set(this.convHT[c.convId], 'threads', res.threads.reverse());
@@ -508,27 +388,13 @@ var app = new Vue({
                 .catch(reject)
             });
         },
-        startThread: function () {
-            let topic = subjectEditor.getText();
-            topic = topic === '\n' ? undefined : topic;
-            if (!topic) {
-                alert('A topic is required when creating a new thread');
-                return;
-            }
-            let text = mainEditor.root.innerHTML;
-            text = text.replace('target="_blank"', '');
-            let content = {
-                subject: topic,
-                content: text,
-                contentType: Circuit.Constants.TextItemContentType.RICH
-            }
+        startThread: function (content, cb = _ => {}) {
             client.addTextItem(this.conversation.convId, content)
             .then(_ => {
-                mainEditor.setText('');
-                subjectEditor.setText('');
+                cb();
                 console.log(`Started new thread on conversation ${this.conversation.convId}`);
             })
-            .catch(console.error);
+            .catch(cb);
         },
         scrollToBottom: function () {
             let self = this;
@@ -551,12 +417,6 @@ var app = new Vue({
             if (!this.usersHT[user.userId]) {
                 this.usersHT[user.userId] = user;
             }
-        },
-        test: function() {
-
-        },
-        presenceText: function (p) {
-            return p && (p.statusMessage || (p.state && p.state.capitalizeFirstLetter()));
         },
         content: function (s) {
             return s.replace(/<(hr[\/]?)>/gi, '<br>');
@@ -606,8 +466,7 @@ var app = new Vue({
             }
 
             // Clear editor. No support for drafts.
-            mainEditor.setText('');
-            subjectEditor.setText('');
+            this.$refs.mainEditor.clear();
 
             if (c.processed && !c.dirty) {
                 this.scrollToBottom();
@@ -623,7 +482,7 @@ var app = new Vue({
             .then(client.getConversationParticipants.bind(null, c.convId, {pageSize: 25, includePresence: true}))
             .then(res => {
                 c.participantList = res.participants.filter(p => { 
-                    return !p.displayName.toUpperCase().startsWith('_CMP') && !p.isDeleted;
+                    return !p.isCMP && !p.isPending && !p.isDeleted;
                 }).sort((a, b) => { 
                     return a.displayName.localeCompare(b.displayName);
                 });
@@ -724,6 +583,10 @@ var app = new Vue({
             });
             app.init(system)
             .catch(console.error);
+        },
+        scrollFeed: function () {
+            var elContent = document.querySelector('.main .content');
+            window.requestAnimationFrame(_ => elContent.scrollTop = elContent.scrollHeight);
         }
     }
 });

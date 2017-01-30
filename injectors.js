@@ -22,6 +22,12 @@ Circuit.Injectors.itemInjector = item => {
             item.teaser = 'Message deleted';
             return;
         }
+
+        // Add "prettyprint" class to "pre" elements
+        if (item.text.content.indexOf('<pre>') >= 0) {
+            item.text.content = item.text.content.replace('<pre>', '<pre class="prettyprint">');
+        }
+
         // Limit subject or content to 100 char, but first remove html tags
         // if content is used.
         let len = 50;
