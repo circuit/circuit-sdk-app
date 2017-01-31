@@ -39,6 +39,9 @@ Vue.component('cDetailsPopover', {
     props: {
         conversation: {
             type: Object
+        },
+        user: {
+            type: Object
         }
     },
     computed: {

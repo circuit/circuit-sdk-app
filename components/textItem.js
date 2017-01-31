@@ -1,7 +1,7 @@
 Vue.component('cTextItem', {
     template: `
-        <div>
-            <a class="d-flex" href="#">
+        <div class="d-flex">
+            <a href="#">
                 <c-avatar class="d-flex mr-2" size="small" :user="item.creator"></c-avatar>
             </a>
             <div class="media-body">

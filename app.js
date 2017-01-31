@@ -7,15 +7,12 @@ $(document).ready(function() {
 
     // Close popovers on backdrop click
     $(document).on('click', function (e) {
-//        $('.participants-popover-trigger, .details-popover-trigger, .schedule-popover-trigger, .files-popover-trigger').each(function () {
         $('.backdrop-close').each(function () {
             if (!$(this).is(e.target) && $(this).has(e.target).length === 0 && $('.popover').has(e.target).length === 0) {                
                 (($(this).popover('hide').data('bs.popover') || {}).inState || {}).click = false;
             }
         });
     });
-
-
 });
 
 // Circuit client instance
@@ -26,7 +23,22 @@ var config = {
         commentsPerThread: 10,
         minTotalItems: 100,
         maxUnreadPerThread: 100
-    }
+    },
+    systems: [                  // Supported systems
+        {domain: 'circuitsandbox.net', name: 'Sandbox', client_id: '06f08f1efbfc4f6d96f086a3677fad0f'},
+        {domain: 'beta.circuit.com', name: 'Beta', client_id: '8d0572f9cc334c8287faf9e51e0ed871'},
+        {domain: 'eu.yourcircuit.com', name: 'EU', client_id: '1b394869703e42ce9d4782c5f793ed95'},
+        {domain: 'na.yourcircuit.com', name: 'NA', client_id: '', disabled: true},
+        {domain: 'circuitdev.unify.com:8094', name: 'dev', client_id: '98d903b55aa4465aa9007081ffa80812'}
+    ],
+    filters: [
+        {id: 'unread', name: 'Unread Conversations'},
+        {id: 'direct', name: 'Direct Conversations'},
+        {id: 'group', name: 'Group Conversations'},
+        {id: 'favorites', name: 'Favorites'},
+        {id: 'flagged', name: 'Flagged Messages'},
+        {id: 'muted', name: 'Archive'}
+    ]
 };
 
 // App
@@ -34,49 +46,32 @@ var app = new Vue({
     el: '#app',
 
     data: {
-        showMainEditor: false,
+        // Cache
         conversations: [],          // Cached conversations array
         convHT: [],                 // Cached conversation hashtable
-        telephonyConvId: null,
-        supportConvId: null,
         usersHT: {},                // Cached user hashtable
         favorites: [],              // Favorites
         muted: [],                  // Muted (aka Archived) conversations
         flagged: [],                // Conversations with flagged messages
-        filteredConversations: [],  // Conversations shown in selector
-        conversation: {
-            dialInDetails: {}
-        },           // Selected conversation
+
+        // Data
+        conversation: {},           // Selected conversation
         user: {},                   // Logged on user
-        systems: [                  // Supported systems
-            {domain: 'circuitsandbox.net', name: 'Sandbox', client_id: '06f08f1efbfc4f6d96f086a3677fad0f'},
-            {domain: 'beta.circuit.com', name: 'Beta', client_id: '8d0572f9cc334c8287faf9e51e0ed871'},
-            {domain: 'eu.yourcircuit.com', name: 'EU', client_id: '1b394869703e42ce9d4782c5f793ed95'},
-            {domain: 'na.yourcircuit.com', name: 'NA', client_id: '', disabled: true},
-            {domain: 'circuitdev.unify.com:8094', name: 'dev', client_id: '98d903b55aa4465aa9007081ffa80812'}
-        ],
+        telephonyConvId: null,
+        supportConvId: null,
+
+        // UI flags
+        showMainEditor: false,
+
+        // Login, systems
+        systems: config.systems,
         system: null,               // Current system
         systemLoading: false,       // UI indicator for system loading spinner
         connectingSystem: '',       // UI text string for showing connecting system
-        filters: [{                 // Supported filters
-            id: 'unread',
-            name: 'Unread Conversations'
-        }, {
-            id: 'direct',
-            name: 'Direct Conversations'
-        }, {
-            id: 'group',
-            name: 'Group Conversations'
-        }, {
-            id: 'favorites',
-            name: 'Favorites'
-        }, {
-            id: 'flagged',
-            name: 'Flagged Messages'
-        }, {
-            id: 'muted',
-            name: 'Archived Conversations'
-        }],
+
+        // Convversion filtering
+        filters: config.filters,
+        filteredConversations: [],  // Conversations shown in selector
         selectedFilter: null        // Selected conversation selector filter
     },
 
@@ -545,11 +540,6 @@ var app = new Vue({
         closePopover: function (e) {
             $(e.target).parents('.popover').popover('hide');
         },
-        closeModal: function (e) {
-            if (!e) return;
-            let modal = e.target.closest('.modal');
-            modal && $(modal).modal('hide');
-        },
         setSystem: function(system) {
             this.system = system;
             localStorage.setItem('system', system.name);
@@ -562,14 +552,12 @@ var app = new Vue({
             localStorage.removeItem('system');
         },
         logout: function (e) {
-            this.closeModal(e);
             this.clearCache();
             client.revokeToken()
             .then(client.logout)
             .then(() => this.clearSystem());
         },
         switchSystem: function(name, e) {
-            e && this.closeModal(e);
             this.clearCache();
             client && client.logout();
 

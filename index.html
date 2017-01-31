@@ -18,31 +18,15 @@
   </head>
   <body>
     <div id="app" v-cloak>
+
       <!-- Landing page -->
-      <div class="no-system" v-show="!system">
-        <div class="center pb-4">
-          <div class="display-4">Circuit SDK App</div>
-          <p class="lead">Circuit-like app built with vue.js and Circuit JS SDK</p>
-          <div class="mt-4">
-            <button type="button" v-for="system in systems" v-on:click="switchSystem(system.name, $event)" class="btn btn-sm btn-outline-primary mr-1" :disabled="system.disabled || systemLoading" :class="{disabled: system.disabled || systemLoading}">{{system.name}}</button>
-          </div>
-          <div class="mt-4 spinner">
-            <i v-show="systemLoading" class="fa fa-spinner fa-spin"></i>
-          </div>
-          <div class="mt-1 message">
-            <transition name="fade">
-              <p class="lead" v-if="systemLoading && user && user.firstName">Hi {{user.firstName}}. Connecting to {{connectingSystem}}...</p>
-            </transition>
-          </div>
-        </div>
-        <nav class="navbar fixed-bottom navbar-light bg-faded">
-          <span class="navbar-text text-center">
-            <a href="https://github.com/circuit/circuit-sdk-app" target="_blank">Fork this project on github</a>&middot;
-            <a href="mailto:roger.urscheler@unify.com">Feedback</a>&middot;
-            <a href="https://circuit.github.com" target="_blank">More info on Circuit SDK</a>
-          </span>
-        </nav>
-      </div>
+      <c-landing v-show="!system"
+        v-on:switch-system="switchSystem"
+        :systems="systems"
+        :user="user"
+        :system-loading="systemLoading"
+        :connecting-system="connectingSystem">  
+      </c-landing>
 
       <!-- Main header -->
       <nav id="header" class="navbar navbar-inverse bg-inverse p-1" v-show="!!system">
@@ -72,7 +56,7 @@
               <div v-if="!conversations.length" class="loading">Loading...</div>
               <div class="panel-body">
 
-              <!-- Filter -->
+                <!-- Filter -->
                 <div class="d-flex flex-row conv-filter px-1 pt-2 pb-1">
                   <button class="btn-link mr-auto"></button>
 
@@ -120,6 +104,7 @@
                     </div>
                   </li>
                 </ul>
+
               </div>
             </div>
 
@@ -158,8 +143,7 @@
                     </ul>
 
                     <!-- Main editor -->
-                    <c-main-editor ref="mainEditor"
-                      v-show="showMainEditor"
+                    <c-main-editor ref="mainEditor" v-show="showMainEditor"
                       v-on:start-thread="startThread"
                       v-on:scroll-feed="scrollFeed">
                     </c-main-editor>
@@ -186,45 +170,15 @@
         </div>
       </transition>
 
-      <!-- My Profile Modal -->
-      <div class="modal left fade" id="profileModal" tabindex="-1" role="dialog">
-        <div class="modal-dialog" role="document">
-          <div class="modal-content">
-            <div class="modal-header py-2 px-3">
-              <h4 class="modal-title">My Profile</h4>
-              <button type="button" class="close" data-dismiss="modal"><span>&times;</span></button>
-            </div>
-            <div class="modal-body">
-              <div class="entry">
-                <div class="label"><span class="fa fa-exchange"></span>Switch system</div>
-              </div>
-              <div class="mt-2">
-                <button type="button" v-for="system in systems" v-on:click="switchSystem(system.name, $event)" class="btn btn-sm btn-outline-primary mx-1 mb-1" :class="{disabled: system.disabled}">{{system.name}}</button>
-              </div>
-              <div class="entry">
-                <button type="button" v-on:click="logout" class="btn btn-sm btn-link px-0 mb-1"><span class="fa fa-sign-out"></span>Logout from {{system && system.name}}</button>
-              </div>
-              <p><br><br>
-              TODO:<br>
-              Set status message<br>
-              Edit profile picture<br>
-              Edit name, phone, etc<br>
-              Edit language<br>
-              Edit share preferences, etc<br>
-              </p>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Import Modals -->
+      <!-- Define Modals -->
+      <c-profile-modal v-on:switch-system="switchSystem" v-on:logout="logout" :systems="systems" :system="system" :user="user"></c-profile-modal>
       <c-notification-modal></c-notification-modal>
       <c-search-modal></c-search-modal>
       <c-info-modal></c-info-modal>
 
-      <!-- Import Popovers -->
+      <!-- Define Popovers -->
       <c-participants-popover :conversation="conversation"></c-participants-popover>
-      <c-details-popover :conversation="conversation"></c-details-popover>
+      <c-details-popover :conversation="conversation" :user="user"></c-details-popover>
       <c-schedule-popover :conversation="conversation"></c-schedule-popover>
       <c-files-popover :conversation="conversation"></c-files-popover>
 
@@ -243,12 +197,14 @@
     <script src="lib/circuit.js"></script>
 
     <!-- app -->
+    <script src="components/landing.js"></script>
     <script src="filters.js"></script>
     <script src="components/avatar.js"></script>
     <script src="components/textItem.js"></script>
     <script src="components/thread.js"></script>
     <script src="components/mainEditor.js"></script>
     <script src="components/infoModal.js"></script>
+    <script src="components/profileModal.js"></script>
     <script src="components/searchModal.js"></script>
     <script src="components/notificationModal.js"></script>
     <script src="components/participantsPopover.js"></script>
