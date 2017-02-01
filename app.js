@@ -72,7 +72,7 @@ var app = new Vue({
         // Convversion filtering
         filters: config.filters,
         filteredConversations: [],  // Conversations shown in selector
-        selectedFilter: null        // Selected conversation selector filter
+        selectedFilter: 'all'       // Selected conversation filter ID
     },
 
     created: function () {
@@ -113,9 +113,6 @@ var app = new Vue({
         prettyPrint();
     },
     computed: {
-        filterDisplay: function () {
-            return (this.selectedFilter && this.selectedFilter.id !== 'all') ? this.selectedFilter.name : '';
-        },
         showParticipantsTab: function () {
             return this.conversation.participants && this.conversation.type !== 'DIRECT';
         }
@@ -153,12 +150,12 @@ var app = new Vue({
                 this.conversations = conversations.reverse();
                 this.conversations.forEach(c => this.convHT[c.convId] = c);
                 this.conversation = this.conversations[0];
-                this.setFilter('all');
+                this.$refs.filter.select('all');
                 return this.conversations;
             })
             .then(this.processConversations)
             .then(conversations => {
-                this.selectConversation(conversations[0])
+                this.$refs.selector.select(conversations[0]);
                 this.setSystem(system);
                 this.systemLoading = false;
             })
@@ -416,64 +413,68 @@ var app = new Vue({
         content: function (s) {
             return s.replace(/<(hr[\/]?)>/gi, '<br>');
         },
-        setFilter: function (filter) {
+        onFilterChanged: function (filter) {
             let conversations = [];
-            this.selectedFilter = this.filters.find(s => { return s.id === filter; });
+            this.selectedFilter = filter;
             switch (filter) {
                 case 'unread':
                 this.filteredConversations = this.conversations.filter(function (c) {return c.userData && (c.userData.unreadItems > 0);});
+                this.$refs.selector.setFilter(filter);
                 break;
                 case 'direct':
                 this.filteredConversations = this.conversations.filter(function (c) {return c.type === 'DIRECT';});
+                this.$refs.selector.setFilter(filter);
                 break;
                 case 'group':
                 this.filteredConversations = this.conversations.filter(function (c) {return c.type === 'GROUP' || c.type === 'COMMUNITY';});
+                this.$refs.selector.setFilter(filter);
                 break;
                 case 'favorites':
                 this.retrieveFavorites().then(c => {
                     this.filteredConversations = c;
+                    // Only set the filter now, after having filtered the conversations
+                    this.$refs.selector.setFilter(filter);
                 });
                 break;
                 case 'muted':
-                this.retrieveMutedConversations().then(c => { this.filteredConversations = c; });
+                this.retrieveMutedConversations().then(c => {
+                    this.filteredConversations = c;
+                    this.$refs.selector.setFilter(filter);
+                });
                 break;
                 case 'flagged':
-                this.retrieveFlagged().then(c => { this.filteredConversations = c; });
+                this.retrieveFlagged().then(c => {
+                    this.filteredConversations = c;
+                    this.$refs.selector.setFilter(filter);
+                });
                 break;
                 default:
                 this.filteredConversations = this.conversations;
+                this.$refs.selector.setFilter(filter);
                 break;
             }
-            conversations.length && this.selectConversation(conversations[0]);
             return conversations;
         },
-        selectConversation: function (c) {
+        onConversationSelected: function (c) {
             this.conversation = c;
 
             // Hide editor until feed is rendered
             this.showMainEditor = false;
 
-            // Different conversation is being selected. If not already
-            // processed, fetch new users and add them to a hashtable
-            // and to conversation.otherUsers
-            if (!c.convId) {
-                return;
-            }
-
             // Clear editor. No support for drafts.
             this.$refs.mainEditor.clear();
 
+            // For now, scroll to bottom if this is the first time
+            // this conversation is selected
             if (c.processed && !c.dirty) {
                 this.scrollToBottom();
                 return;
             }
 
-            console.log(`Processing new conversation ${c.convId}`);
-            
-            return this.retrieveConversationFeed(c)
             // Fetch the first 25 conversation participants so these are ready
             // when opening the participants popover. GetUsersById is less performant
             // than this API and does not support filtering.
+            return this.retrieveConversationFeed(c)
             .then(client.getConversationParticipants.bind(null, c.convId, {pageSize: 25, includePresence: true}))
             .then(res => {
                 c.participantList = res.participants.filter(p => { 

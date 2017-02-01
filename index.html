@@ -29,81 +29,22 @@
       </c-landing>
 
       <!-- Main header -->
-      <nav id="header" class="navbar navbar-inverse bg-inverse p-1" v-show="!!system">
-        <form class="form-inline mr-3 ml-2">
-          <a class="navbar-text p-0" data-toggle="modal" data-target="#profileModal">
-            <c-avatar :user="user"></c-avatar>
-            {{user && user.firstName}}
-          </a>
-          <a tabindex="1" class="nav-item ml-auto" data-toggle="modal" data-target="#infoModal">
-            <span class="fa fa-info"></span>
-          </a>
-          <a tabindex="1" class="nav-item ml-2" data-toggle="modal" data-target="#searchModal">
-            <span class="fa fa-search"></span>
-          </a>
-          <a tabindex="1" class="nav-item ml-2" data-toggle="modal" data-target="#notificationsModal">
-            <span class="fa fa-bell"></span>
-          </a>
-        </form>
-      </nav>
+      <c-header v-show="!!system" :user="user"></c-header>
 
       <transition name="fade">
         <div class="container-fluid" v-show="!!system">
           <div class="row">
 
-            <!-- Selector -->
+            <!-- Left Pane -->
             <div id="selector">
               <div v-if="!conversations.length" class="loading">Loading...</div>
               <div class="panel-body">
 
-                <!-- Filter -->
-                <div class="d-flex flex-row conv-filter px-1 pt-2 pb-1">
-                  <button class="btn-link mr-auto"></button>
+                <!-- Conversation Filter -->
+                <c-conversation-filter ref="filter" v-on:filter-changed="onFilterChanged" :filters="filters"></c-conversation-filter>
 
-                  <div v-show="!filterDisplay">
-                    <div class="dropdown">
-                      <button class="btn-link pl-0 mr-1" v-show="!filterDisplay" type="button" data-toggle="dropdown">
-                        <span class="fa fa-sort-amount-desc"></span>
-                      </button>
-                      <div class="dropdown-menu dropdown-menu-right">
-                        <button class="dropdown-item btn-sm" v-for="filter in filters" v-on:click="setFilter(filter.id)" type="button">{{filter.name}}</button>
-                      </div>
-                    </div>
-                  </div>
-                  <div class="d-flex">
-                    <div class="dropdown" v-show="!!filterDisplay">
-                      <button class="btn-link named-dropdown" type="button" data-toggle="dropdown">
-                        <span>{{filterDisplay}}</span>
-                      </button>
-                      <div class="dropdown-menu dropdown-menu-right">
-                        <button class="dropdown-item btn-sm" v-for="filter in filters" v-on:click="setFilter(filter.id)" type="button">{{filter.name}}</button>
-                      </div>
-                    </div>
-                    <button class="btn-link mr-1" type="button" v-show="!!filterDisplay" v-on:click="setFilter('all')">
-                      <span class="fa fa-times"></span>
-                    </button>
-                  </div>
-                </div>
-
-                <!-- Conversations -->
-                <ul class="chat">
-                  <li v-for="c in filteredConversations" :key="c.convId" v-on:click="selectConversation(c)" :class="{selected: c.convId==conversation.convId, unread: c.userData.unreadItems>0}" class="left clearfix">
-                    <c-avatar size="large" :user="c.peerUser" :conversation="c"></c-avatar>
-                    <div class="chat-body clearfix">
-                      <div class="header ellipsis">
-                        <strong class="primary-font">{{c.title}}</strong>
-                      </div>
-                      <div class="teaser">
-                        <p v-if="c.topLevelItem.text" class="ellipsis">{{c.topLevelItem.teaser}}</p>
-                      </div>
-                      <div class="info">
-                        <small class="pull-right text-muted timestamp" v-if="!selectedFilter || selectedFilter.id!=='favorites'">
-                          {{c.topLevelItem.creationTime | time}}
-                        </small>
-                      </div>
-                    </div>
-                  </li>
-                </ul>
+                <!-- Conversation Selector -->
+                <c-conversation-selector ref="selector" v-on:conversation-selected="onConversationSelected" :conversations="filteredConversations"></c-conversation-selector>
 
               </div>
             </div>
@@ -112,22 +53,7 @@
             <div class="main">
 
               <!-- Conversation Header -->
-              <div class="media header">
-                <c-avatar class="d-flex mr-3" size="large" :user="conversation.peerUser" :conversation="conversation"></c-avatar>
-                <div class="media-body">
-                  <h3 class="mt-1 mb-1 fw4">{{conversation.title}}</h3>
-                  <div class="d-flex tabs">
-                    <button v-show="showParticipantsTab" class="btn btn-sm btn-link participants-popover-trigger  backdrop-close">{{conversation.participants && conversation.participants.length}} Member<span v-if="conversation.participants && conversation.participants.length > 1">s</span></button>
-                    <span v-show="showParticipantsTab" class="middot">&middot;</span>
-                    <button class="btn btn-sm btn-link details-popover-trigger backdrop-close">Details</button>
-                    <span class="middot">&middot;</span>
-                    <button v-show="conversation.type=='GROUP'" class="btn btn-sm btn-link schedule-popover-trigger backdrop-close">Schedule</button>
-                    <span v-show="conversation.type=='GROUP'" class="middot">&middot;</span>
-                    <button class="btn btn-sm btn-link files-popover-trigger backdrop-close">Files</button>
-                  </div>
-                </div>
-              </div>
-
+              <c-conversation-header :conversation="conversation"></c-conversation-header>
               <!-- Content -->
               <div class="content">
                 <div class="row">
@@ -143,24 +69,12 @@
                     </ul>
 
                     <!-- Main editor -->
-                    <c-main-editor ref="mainEditor" v-show="showMainEditor"
-                      v-on:start-thread="startThread"
-                      v-on:scroll-feed="scrollFeed">
-                    </c-main-editor>
+                    <c-main-editor ref="mainEditor" v-show="showMainEditor" v-on:start-thread="startThread" v-on:scroll-feed="scrollFeed"></c-main-editor>
 
-                  </div><!-- Conversation Feed -->
+                  </div>
 
                   <!-- Thread Shortcout -->
-                  <div class="col-4 thread-shortcuts">
-                    <div class="h5 fixed ml-3 title fw4">Thread shortcuts</div>
-                    <nav class="bs-docs-sidebar">
-                      <ul class="nav flex-column fixed">
-                        <li class="nav-item" v-for="thread in conversation.threads" :key="thread.parentItem.itemId" v-if="thread.parentItem.type=='TEXT'">
-                          <a class="nav-link" :href="'#' + thread.parentItem.itemId">{{thread.parentItem.teaser}}</a>
-                        </li>
-                      </ul>
-                    </nav>
-                  </div> <!-- Thread Shortcout -->
+                  <c-thread-shortcut :conversation="conversation"></c-thread-shortcut>
 
                 </div>
 
@@ -211,6 +125,11 @@
     <script src="components/detailsPopover.js"></script>
     <script src="components/schedulePopover.js"></script>
     <script src="components/filesPopover.js"></script>
+    <script src="components/header.js"></script>
+    <script src="components/conversationFilter.js"></script>
+    <script src="components/conversationSelector.js"></script>
+    <script src="components/conversationHeader.js"></script>
+    <script src="components/threadShortcut.js"></script>
     <script src="app.js"></script>
     <script src="injectors.js"></script>
     
