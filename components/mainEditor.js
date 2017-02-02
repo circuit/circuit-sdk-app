@@ -1,30 +1,34 @@
 Vue.component('cMainEditor', {
     template: `
-        <div class="main-editor-component">
+    <div> 
+        <div class="d-flex justify-content-center">  
+            <button class="btn btn-link btn-sm reply" v-if="!editorShown" v-on:click="showEditor">Start new thread</button>
+        </div>
+        <div v-show="editorShown"  class="main-editor-component">
             <div class="subject-editor">
                 <div ref="subjectEditor" class="editor"></div>
             </div>
             <div class="content-editor">
                 <div ref="contentEditor" class="editor"></div>
-
-                <div class="toolbar">
-                    <button class="ql-bold" data-toggle="tooltip" data-placement="top" title="Bold"></button>
-                    <button class="ql-italic" data-toggle="tooltip" data-placement="top" title="Italic"></button>
-                    <button class="ql-list" value="bullet" data-toggle="tooltip" data-placement="top" title="Bullet List"></button>
-                    <button class="ql-list" value="ordered" data-toggle="tooltip" data-placement="top" title="Ordered List"></button>
-                    <button class="ql-code-block ml-3" data-toggle="tooltip" data-placement="top" title="Code Block"></button>
-                    <button class="ql-link" data-toggle="tooltip" data-placement="top" title="Insert link"></button>
-                    <button class="ql-clean ml-3" data-toggle="tooltip" data-placement="top" title="Remove formatting"></button>
-                    <button type="button" class="btn btn-sm btn-outline-primary send" v-on:click="startThread">Start new thread</button>
-                </div>
+                <button type="button" class="btn btn-sm btn-outline-primary send" v-on:click="startThread">Send</button>
             </div>
         </div>
+    </div>
     `,
     data: function () {
         return {
+            editorShown: false,
             contentEditor: null,
             subjectEditor: null            
         }
+    },
+    created: function () {
+        hub.$on('editor-shown', this.hideEditor);
+        hub.$on('conversation-selected', this.hideEditor);
+    },
+    beforeDestroy: function () {
+        hub.$off('editor-shown', this.hideEditor);
+        hub.$off('conversation-selected', this.hideEditor);
     },
     mounted: function () {
         let self = this;
@@ -34,15 +38,17 @@ Vue.component('cMainEditor', {
             enter: {
                 key: 13,
                 handler: _ => {
-                    this.$emit('scroll-feed', {bottom: true});
+                    hub.$emit('scroll-feed', { bottom: true });
                     return true;
                 }
             }
         };
 
+        var toolbarOptions = [['bold', 'italic', { 'list': 'ordered'}, { 'list': 'bullet' }], ['code-block', 'link'], ['clean']];
+
         this.contentEditor = new Quill(this.$refs.contentEditor, {
             modules: {
-                toolbar: '.main-editor-component .toolbar',
+                toolbar: toolbarOptions,
                 keyboard: {
                     bindings: bindings
                 }
@@ -55,7 +61,7 @@ Vue.component('cMainEditor', {
         toolbar.addHandler('link', value => {
             if (value) {
                 var href = prompt('Enter the URL');
-                this.quill.format('link', href);
+                self.contentEditor.format('link', href);
             }
         });
 
@@ -78,8 +84,21 @@ Vue.component('cMainEditor', {
             placeholder: 'Thread title',
             theme: 'snow'
         });
+
+        this.$refs.contentEditor.parentNode.insertBefore(this.$refs.contentEditor, this.$refs.contentEditor.previousSibling);
     },
     methods: {
+        showEditor: function () {
+            this.editorShown = true;
+            window.requestAnimationFrame(_ => this.$refs.subjectEditor.querySelector('.ql-editor').focus());
+            hub.$emit('editor-shown', { type: 'post' });
+            hub.$emit('scroll-feed', { bottom: true });
+        },
+        hideEditor: function (data) {
+            if (!data || data.type !== 'post') {
+               this.editorShown = false;
+            }
+        },
         startThread: function () {
             let topic = this.subjectEditor.getText();
             topic = topic.replace(/(\r\n|\n|\r)/gm,'');

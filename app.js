@@ -18,6 +18,8 @@ $(document).ready(function() {
 // Circuit client instance
 var client = null;
 
+var hub = new Vue();
+
 var config = {
     feedLoad: {
         commentsPerThread: 10,
@@ -108,6 +110,24 @@ var app = new Vue({
                 console.error(`Cannot auto logon to ${systemname}. Require user action to trigger OAuth popup.`);
             });
         }
+
+        hub.$on('editor-shown', data => {
+            if (data.type === 'post') {
+                this.scrollToBottom(true);
+            } else if (data.threadId && this.conversation.threads.length > 0) {
+                // If this is the last thread, then scroll to the bottom
+                if (this.conversation.threads[this.conversation.threads.length - 1].parentItem.itemId === data.threadId) {
+                    this.scrollToBottom(true);
+                }
+            }
+        });
+        hub.$on('scroll-feed', data => {
+            if (data.bottom) {
+                this.scrollToBottom(true);
+            }
+        });
+
+
     },
     updated: function () {
         prettyPrint();
@@ -222,7 +242,7 @@ var app = new Vue({
             })
             // Get all creatorIds
             .then(threads => {
-                return threads.reduce((res, thread) => {
+                let users = threads.reduce((res, thread) => {
                     if (res.indexOf(thread.parentItem.creatorId) === -1) {
                         res.push(thread.parentItem.creatorId);
                     }
@@ -231,10 +251,11 @@ var app = new Vue({
                             res.push(comment.creatorId);
                         }
                     });
-                    self.scrollToBottom();
-
                     return res;
-                }, [])
+                }, []);
+
+                self.scrollToBottom();
+                return users;
             })
             // Get the user object for the creators. If not yet in cache
             // fetch them from the server.
@@ -388,14 +409,16 @@ var app = new Vue({
             })
             .catch(cb);
         },
-        scrollToBottom: function () {
+        scrollToBottom: function (animate) {
             let self = this;
             // Scroll to bottom of page and show editor
             var elContent = document.querySelector('.main .content');
             self.showMainEditor = true;
+
             window.requestAnimationFrame(_ => {
-                elContent.scrollTop = elContent.scrollHeight;
-            })
+                $('.main .content').animate({ scrollTop: elContent.scrollHeight }, animate ? 500 : 0);
+            });
+
         },
         userIsModerator: function (user) {
             if (!user || !this.conversation.moderators) {
@@ -456,6 +479,8 @@ var app = new Vue({
             return conversations;
         },
         onConversationSelected: function (c) {
+            hub.$emit('conversation-selected', { old: this.conversation, new: c });
+
             this.conversation = c;
 
             // Hide editor until feed is rendered

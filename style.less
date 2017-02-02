@@ -591,7 +591,7 @@ button:hover {
 }
 
 /* Main Editor */
-.main-editor-component {
+.main-editor-component, .reply-editor-component {
   >div {
     padding: 0 10px 0 20px;  
   }
@@ -603,9 +603,20 @@ button:hover {
   }
   .content-editor {
     height: auto;
+    position: relative;
 
     .editor {
       min-height: 80px;
+    }
+    .send {
+      position: absolute;
+      bottom: 7px; 
+      .main-editor-component& {
+        right: 10px;
+      }
+       .reply-editor-component& {
+        right: 0px;
+      }
     }
     .ql-snow.ql-toolbar {
       border: none;
@@ -622,16 +633,21 @@ button:hover {
         background-color: #0275d8;
         border-color: #0275d8;
       }
-    } 
+    }
     .ql-editor {
-      overflow-y: visible; 
+      overflow-y: visible;
+      padding: 8px 10px;
+    }
+    .reply-editor-component& {
+      padding: 20px 0px 0px 0px;
     }
   }
 }
 
 .ql-editor.ql-blank::before {
-  opacity: 0.7;
+  opacity: 0.4;
 }
+
 
 /******************************/
 /* Avatar                     */

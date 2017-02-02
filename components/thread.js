@@ -10,20 +10,48 @@ Vue.component('cThread', {
                 v-for="comment in thread.comments">
                 <c-text-item :item="comment"></c-text-item>
             </div>
-            <button class="btn btn-link btn-sm reply" v-on:click="reply"><span class="fa fa-reply"></span>Reply to thread</button>
+            <button class="btn btn-link btn-sm reply" v-if="!editorShown" v-on:click="showEditor"><span class="fa fa-reply"></span>Reply to thread</button>
+            <c-reply-editor v-else v-on:reply="reply"></c-reply-editor>
         </div>
     </li>
     `,
+    data: function () {
+        return {
+            editorShown: false
+        }
+    },
     props: {
         thread: {
             type: Object
         }
     },
-    computed: {
+    created: function () {
+        hub.$on('conversation-selected', this.hideEditor);
+        hub.$on('editor-shown', this.hideEditor);
+    },
+    beforeDestroy: function () {
+        hub.$off('conversation-selected', this.hideEditor);
+        hub.$off('editor-shown', this.hideEditor);
     },
     methods: {
-        reply: function () {
-
+        showEditor: function () {
+            this.editorShown = true;
+            hub.$emit('editor-shown', { type: 'reply',  threadId: this.thread.parentItem.itemId });
+        },
+        hideEditor: function (data) {
+            if (!data || !data.threadId || data.threadId !== this.thread.parentItem.itemId) {
+               this.editorShown = false;
+            }
+        },
+        reply: function (content, cb = _ => {}) {
+            content.parentId = this.thread.parentItem.itemId;
+            client.addTextItem(this.thread.parentItem.convId, content)
+            .then(_ => {
+                this.editorShown = false;
+                cb();
+                console.log(`Sent reply on thread ${this.thread.parentItem.itemId} of conversation ${this.thread.parentItem.convId}`);
+            })
+            .catch(cb);
         }
     }
 });
