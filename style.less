@@ -59,6 +59,11 @@
   font-weight: 500;
 }
 
+
+.fw6 {
+  font-weight: 600;
+}
+
 .light {
   color: #777777;
 }
@@ -389,34 +394,86 @@ button:hover {
     overflow-y: auto;
 
     li.media {
-      overflow-x: auto;
-      padding: 13px 13px 13px 20px;
-      padding-bottom: 15px;
-      border-bottom: 1px dotted #B3A9A9;
     }
 
-    .media-body {
-      margin-left: 5px;
-      hr {
-        margin-top: 8px;
-        margin-bottom: 0;
-        border-top: 0;
+  }
+}
+
+.thread-component {
+  display: flex;
+  align-items: flex-start;
+  overflow-x: auto;
+  padding: 15px 20px 15px 15px;
+  background: #f0f0f0;
+  margin: 15px 10px 10px 10px;
+  border-radius: 5px;
+
+  >div {
+    margin-left: 5px;
+    flex: 1 1 0%;
+
+    .name {
+      font-weight: 600;
+      height: 19px;
+    }
+
+    .unread {
+      color: #0c0 !important;
+    }
+
+    .post {
+      min-height: 35px;
+    }
+    
+    .comments {
+      margin-top: 20px;
+      display: flex;
+      align-items: flex-start;
+    }
+
+    hr {
+      margin-top: 8px;
+      margin-bottom: 0;
+      border-top: 0;
+    }
+    
+    .reply {
+      font-size: 13px;
+      padding: 0;
+      margin-top: 15px
+    }
+    
+    a {
+      text-decoration: none;
+      color: @green;
+      &:hover {
+        color: @darkGreen;
       }
-      .reply {
-        font-size: 13px;
-        padding: 0;
-        margin-top: 15px
+    }
+    p {
+      margin-bottom: 5px;
+    }
+  }
+  .text-item-component {
+    width: 100%;
+  }
+  .item-actions-component {
+    height: 19px;
+    margin-top: 2px;
+    .fa {
+      font-size: 12px;
+      padding-top: 3px;
+      padding-right: 6px;
+      cursor: pointer;
+      &:hover {
+        color: black;
       }
-      a {
-        text-decoration: none;
-        color: @green;
-        &:hover {
-          color: @darkGreen;
-        }
-      }
-      p {
-        margin-bottom: 5px;
-      }
+    }
+    .likes {
+      cursor: pointer;
+      &:hover {
+        color: black;
+      }        
     }
   }
 }
@@ -430,6 +487,8 @@ button:hover {
 
 /* threads shortcut */
 .thread-shortcuts {
+  padding-left: 0;
+  margin-left: -5px;
   .title {
     top: 140px;
   }
@@ -599,6 +658,7 @@ button:hover {
     .editor {
       font-weight: 600;
       border-bottom: none;
+      background-color: white;
     }
   }
   .content-editor {
@@ -607,6 +667,7 @@ button:hover {
 
     .editor {
       min-height: 80px;
+      background-color: white;
     }
     .send {
       position: absolute;
@@ -660,6 +721,20 @@ button:hover {
   >img {
     border-radius: 50%;
     position: absolute;
+  }
+
+  &.tiny {
+    width: 25px;
+    height: 20px;
+    >img {
+      width: 25px;
+      height: 25px;
+    }
+    >div {
+      padding: 5px 5px;
+      top: 17px;
+      left: 17px;
+    }
   }
 
   &.small {

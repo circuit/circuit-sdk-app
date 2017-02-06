@@ -2,7 +2,7 @@ $(document).ready(function() {
     // Tooltip config
     $('body').tooltip({
         selector: '[data-toggle="tooltip"]',
-        delay: { show: 1000, hide: 100 }
+        delay: { show: 1000, hide: 400 }
     });
 
     // Close popovers on backdrop click
@@ -61,9 +61,6 @@ var app = new Vue({
         user: {},                   // Logged on user
         telephonyConvId: null,
         supportConvId: null,
-
-        // UI flags
-        showMainEditor: false,
 
         // Login, systems
         systems: config.systems,
@@ -126,8 +123,13 @@ var app = new Vue({
                 this.scrollToBottom(true);
             }
         });
-
-
+    },
+    mounted: function () {
+        let obj = document.querySelector('.content');
+        throttle('scroll', 'scroll.throttled', obj);
+        obj.addEventListener('scroll.throttled', _ => {
+            hub.$emit('feed-scrolled')
+        });
     },
     updated: function () {
         prettyPrint();
@@ -137,12 +139,10 @@ var app = new Vue({
             return this.conversation.participants && this.conversation.type !== 'DIRECT';
         }
     },
-
     watch: {
         conversation: function (val) {
         }
     },
-
     methods: {
         test: function () {
             client.revokeToken()
@@ -238,6 +238,7 @@ var app = new Vue({
             // Reserve the threads
             .then(res => {
                 this.$set(this.convHT[c.convId], 'threads', res.threads.reverse());
+                !c.processed && this.scrollToBottom();
                 return c.threads = res.threads.reverse();
             })
             // Get all creatorIds
@@ -254,7 +255,6 @@ var app = new Vue({
                     return res;
                 }, []);
 
-                self.scrollToBottom();
                 return users;
             })
             // Get the user object for the creators. If not yet in cache
@@ -271,7 +271,6 @@ var app = new Vue({
                         });
                     });
                 });
-                console.log(`Loaded ${users.length} users for conversation ${c.convId} when loading its items.`);
             })
             .then(_ => c.dirty = false);
         },
@@ -413,8 +412,6 @@ var app = new Vue({
             let self = this;
             // Scroll to bottom of page and show editor
             var elContent = document.querySelector('.main .content');
-            self.showMainEditor = true;
-
             window.requestAnimationFrame(_ => {
                 $('.main .content').animate({ scrollTop: elContent.scrollHeight }, animate ? 500 : 0);
             });
@@ -483,9 +480,6 @@ var app = new Vue({
 
             this.conversation = c;
 
-            // Hide editor until feed is rendered
-            this.showMainEditor = false;
-
             // Clear editor. No support for drafts.
             this.$refs.mainEditor.clear();
 
@@ -500,6 +494,7 @@ var app = new Vue({
             // when opening the participants popover. GetUsersById is less performant
             // than this API and does not support filtering.
             return this.retrieveConversationFeed(c)
+            .then(_ => this.scrollToBottom())
             .then(client.getConversationParticipants.bind(null, c.convId, {pageSize: 25, includePresence: true}))
             .then(res => {
                 c.participantList = res.participants.filter(p => { 

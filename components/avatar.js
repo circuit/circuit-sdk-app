@@ -48,14 +48,14 @@ Vue.component('cAvatar', {
         },
         urls: function () {
             if (this.user) {
-                return [this.size === 'small' ? this.user.avatar : this.user.avatarLarge];
+                return [this.size !== 'large' ? this.user.avatar : this.user.avatarLarge];
             }
             if (this.conversation.hasGroupAvatar) {
-                return [this.size === 'small' ? this.conversation.avatar : this.conversation.avatarLarge];
+                return [this.size !== 'large' ? this.conversation.avatar : this.conversation.avatarLarge];
             }
             if (this.conversation.collageAvatars) {
                 return this.conversation.collageAvatars.map(a => {
-                    return this.size === 'small' ? a.avatar : a.avatarLarge;
+                    return this.size !== 'large' ? a.avatar : a.avatarLarge;
                 });
             }
             return [];

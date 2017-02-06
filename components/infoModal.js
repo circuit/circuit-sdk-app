@@ -28,10 +28,7 @@ Vue.component('cInfoModal', {
                 <ul>
                   <li>Status message (show and set)</li>
                   <li>Display RTC and System items in the feed</li>
-                  <li>Updating conversation & items when receiving items</li>
-                  <li>Replying to threads</li>
                   <li>Creating conversations</li>
-                  <li>Enhance feed with timestamp, creator, like, flag, etc</li>
                   <li>Add call capabilities (voice, video & screenshare)</li>
                   <li>Load more (conversations, items, participants, etc)</li>
                   <li>Mentions</li>
@@ -40,7 +37,6 @@ Vue.component('cInfoModal', {
                   <li>Search</li>
                   <li>Editing of text messages</li>
                   <li>Telephony (ATC/UTC)</li>
-                  <li>Use vue.js component functionality</li>
                 </ul>
               </div>
 

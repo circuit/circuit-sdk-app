@@ -52,24 +52,26 @@
             <!-- Right Pane -->
             <div class="main">
 
+
               <!-- Conversation Header -->
               <c-conversation-header :conversation="conversation"></c-conversation-header>
               <!-- Content -->
               <div class="content">
+
                 <div class="row">
 
                   <!-- Conversation Feed -->
                   <div class="col-8">
 
                     <!-- Feed List -->
-                    <ul class="list-unstyled">
+                    <ul class="list-unstyled feed-list">
                       <template v-for="thread in conversation.threads">
                         <c-thread :thread="thread" v-if="thread.parentItem.type=='TEXT'"></c-thread>
                       </template>
                     </ul>
 
                     <!-- Main editor -->
-                    <c-main-editor ref="mainEditor" v-show="showMainEditor" v-on:start-thread="startThread"></c-main-editor>
+                    <c-main-editor ref="mainEditor" v-on:start-thread="startThread"></c-main-editor>
 
                   </div>
 
@@ -111,10 +113,14 @@
     <script src="lib/circuit.js"></script>
 
     <!-- app -->
+    <script src="utils.js"></script>
     <script src="components/landing.js"></script>
     <script src="filters.js"></script>
     <script src="components/avatar.js"></script>
+    <script src="components/usersList.js"></script>
+    <script src="components/likesPopover.js"></script>
     <script src="components/textItem.js"></script>
+    <script src="components/itemActions.js"></script>
     <script src="components/thread.js"></script>
     <script src="components/mainEditor.js"></script>
     <script src="components/infoModal.js"></script>
