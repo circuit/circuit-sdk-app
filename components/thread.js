@@ -15,7 +15,7 @@ Vue.component('cThread', {
             <div class="comments media mt-3"
                 v-if="thread.comments && thread.comments.length > 0"
                 v-for="comment in thread.comments">
-                <c-text-item :item="comment" :ctype="ctype"></c-text-item>
+                <c-text-item :item="comment"></c-text-item>
             </div>
             <button class="btn btn-link btn-sm reply" v-if="!editorShown" v-on:click="showEditor"><span class="fa fa-reply"></span>Reply to thread</button>
             <c-reply-editor v-else v-on:reply="reply"></c-reply-editor>
