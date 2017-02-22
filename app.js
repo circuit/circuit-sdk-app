@@ -27,7 +27,7 @@ var config = {
         maxUnreadPerThread: 100
     },
     systems: [                  // Supported systems
-        {domain: 'circuitsandbox.net', name: 'Sandbox', client_id: '06f08f1efbfc4f6d96f086a3677fad0f'},
+        {domain: 'circuitsandbox.net', name: 'Sandbox', client_id: '20b41777208442eb9432d4aeb4a361b6'},
         {domain: 'beta.circuit.com', name: 'Beta', client_id: '8d0572f9cc334c8287faf9e51e0ed871'},
         {domain: 'eu.yourcircuit.com', name: 'EU', client_id: '1b394869703e42ce9d4782c5f793ed95'},
         {domain: 'na.yourcircuit.com', name: 'NA', client_id: '', disabled: true},
@@ -300,6 +300,9 @@ var app = new Vue({
                     }
                 })
 
+                // workaround for the backend issue in getUsersById with purged users
+                newUserIds = newUserIds.filter(uid => { return uid !== 'a932a8f7-d847-4e05-bc20-0442281a9d12'; })
+
                 // Use conversation from cache since that's the one we updated
                 convs = convs.map(c => {
                     return this.convHT[c.convId] || c;
@@ -311,9 +314,9 @@ var app = new Vue({
                         if (c.peerUserId) {
                             c.peerUser = self.usersHT[c.peerUserId];
                             // TODO: Don't copy those. Instead looks them up in the userHT when needed
-                            c.avatarLarge = c.peerUser.avatarLarge;
-                            c.avatar = c.peerUser.avatar;
-                            c.title = c.peerUser.displayName;
+                            c.avatarLarge = c.peerUser && c.peerUser.avatarLarge;
+                            c.avatar = c.peerUser && c.peerUser.avatar;
+                            c.title = c.peerUser && c.peerUser.displayName;
                         }
                         if (c.type !== Circuit.Enums.ConversationType.DIRECT) {
                             if (!c.hasConversationAvatar) {
@@ -333,7 +336,10 @@ var app = new Vue({
                     });
                     resolve(convs);
                 })
-                .catch(reject);
+                .catch(err => {
+                    console.log(err)
+                    reject(err)
+                });
             });
         },
         getFirstnames: function (conversation, howMany) {
@@ -360,7 +366,6 @@ var app = new Vue({
                 });
                 if (newUserIds.length) {
                     // Limit getting more than 100 users at a time
-
                     return client.getUsersById(newUserIds)
                     .then(users => {
                         console.log(`Retrieved ${users.length} users from server`);
