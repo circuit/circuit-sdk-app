@@ -28,7 +28,7 @@ var config = {
     },
     systems: [
         // Supported systems
-        {domain: 'circuitsandbox.net', name: 'Sandbox', client_id: '797b577a127a4390a571dd72c8dd5383'},
+        {domain: 'circuitsandbox.net', name: 'Sandbox', client_id: 'f1e215bde18f432ba2be1f133472fc2e'},
         {domain: 'beta.circuit.com', name: 'Beta', client_id: '8d0572f9cc334c8287faf9e51e0ed871'},
         {domain: 'eu.yourcircuit.com', name: 'EU', client_id: '1b394869703e42ce9d4782c5f793ed95'},
         {domain: 'na.yourcircuit.com', name: 'NA', client_id: '', disabled: true},
@@ -166,7 +166,7 @@ var app = new Vue({
             })
             .then(this.addEventListeners)
             .then(_ => client.subscribePresence.bind(null, [self.user.userId]))
-            .then(client.getConversations.bind(null, {numberOfConversations: 100, numberOfParticipants: 4}))
+            .then(client.getConversations.bind(null, {numberOfConversations: 100, numberOfParticipants: 4, direction: Circuit.Constants.SearchDirection.BEFORE}))
             .then(conversations => {
                 this.conversations = conversations.reverse();
                 this.conversations.forEach(c => this.convHT[c.convId] = c);
