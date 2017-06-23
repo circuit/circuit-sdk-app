@@ -8,7 +8,7 @@ $(document).ready(function() {
     // Close popovers on backdrop click
     $(document).on('click', function (e) {
         $('.backdrop-close').each(function () {
-            if (!$(this).is(e.target) && $(this).has(e.target).length === 0 && $('.popover').has(e.target).length === 0) {                
+            if (!$(this).is(e.target) && $(this).has(e.target).length === 0 && $('.popover').has(e.target).length === 0) {
                 (($(this).popover('hide').data('bs.popover') || {}).inState || {}).click = false;
             }
         });
@@ -26,8 +26,9 @@ var config = {
         minTotalItems: 100,
         maxUnreadPerThread: 100
     },
-    systems: [                  // Supported systems
-        {domain: 'circuitsandbox.net', name: 'Sandbox', client_id: '20b41777208442eb9432d4aeb4a361b6'},
+    systems: [
+        // Supported systems
+        {domain: 'circuitsandbox.net', name: 'Sandbox', client_id: '06f08f1efbfc4f6d96f086a3677fad0f'},
         {domain: 'beta.circuit.com', name: 'Beta', client_id: '8d0572f9cc334c8287faf9e51e0ed871'},
         {domain: 'eu.yourcircuit.com', name: 'EU', client_id: '1b394869703e42ce9d4782c5f793ed95'},
         {domain: 'na.yourcircuit.com', name: 'NA', client_id: '', disabled: true},
@@ -181,7 +182,7 @@ var app = new Vue({
             })
             .then(this.filterSpecialConversations)
             .then(client.setPresence.bind(null, {state: Circuit.Enums.PresenceState.AVAILABLE}))
-            .then(_ => { return client.getPresence([this.user.userId]); })
+            .then(_ => client.getPresence([this.user.userId]))
             .then(p => this.$set(this.usersHT[p[0].userId], 'presence', p[0]))
             .catch(_ => this.systemLoading = false);
         },
@@ -226,7 +227,7 @@ var app = new Vue({
             }
         },
         sortConversations: function () {
-            this.conversations = this.conversations.sort((a, b) => { 
+            this.conversations = this.conversations.sort((a, b) => {
                 return b.topLevelItem.creationTime - a.topLevelItem.creationTime;
             });
         },
@@ -286,7 +287,7 @@ var app = new Vue({
                         c = this.convHT[c.convId];
                     }
                     if (c.type === Circuit.Enums.ConversationType.DIRECT) {
-                        let peerUserId = c.participants.filter(p => { 
+                        let peerUserId = c.participants.filter(p => {
                             return p !== client.loggedOnUser.userId;
                         })[0];
                         if (!self.usersHT[peerUserId]) {
@@ -331,7 +332,7 @@ var app = new Vue({
                                 this.$set(c, 'collageAvatars', collageAvatars);
                             }
                             c.title = c.topic || c.topicPlaceholder || this.getFirstnames(c, 4).join(', ');
-                            
+
                         }
                     });
                     resolve(convs);
@@ -371,8 +372,14 @@ var app = new Vue({
                         console.log(`Retrieved ${users.length} users from server`);
                         users.forEach(user => this.$set(this.usersHT, user.userId, user));
                         Array.prototype.push.apply(existingUsers, users);
+                        return users.filter(u => u.userState === 'ACTIVE').map(u => u.userId);
                     })
-                    .then(client.getPresence.bind(null, newUserIds))
+                    .then(userIds => {
+                        if (!userIds.length) {
+                            return [];
+                        }
+                        return client.getPresence(userIds);
+                    })
                     .then(presence => {
                         console.log(`Retrieved and subscribing presence for ${presence.length} users from server`);
                         if (!Array.isArray(presence)) {
@@ -383,8 +390,14 @@ var app = new Vue({
                                 this.$set(this.usersHT[p.userId], 'presence', p);
                             }
                         });
+                        return presence.map(u => u.userId);
                     })
-                    .then(client.subscribePresence.bind(null, newUserIds))
+                    .then(userIds => {
+                        if (!userIds.length) {
+                            return [];
+                        }
+                        return client.subscribePresence(userIds);
+                    })
                     .then(_ => resolve(existingUsers))
                     .catch(reject);
                 } else {
@@ -502,9 +515,9 @@ var app = new Vue({
             .then(_ => this.scrollToBottom())
             .then(client.getConversationParticipants.bind(null, c.convId, {pageSize: 25, includePresence: true}))
             .then(res => {
-                c.participantList = res.participants.filter(p => { 
+                c.participantList = res.participants.filter(p => {
                     return !p.isCMP && !p.isPending && !p.isDeleted;
-                }).sort((a, b) => { 
+                }).sort((a, b) => {
                     return a.displayName.localeCompare(b.displayName);
                 });
             })

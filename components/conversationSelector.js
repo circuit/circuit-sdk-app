@@ -7,10 +7,10 @@ Vue.component('cConversationSelector', {
               <div class="header ellipsis">
                 <strong class="primary-font">{{c.title}}</strong>
               </div>
-              <div class="teaser">
+              <div class="teaser" v-if="c.topLevelItem">
                 <p v-if="c.topLevelItem.text" class="ellipsis">{{c.topLevelItem.teaser}}</p>
               </div>
-              <div class="info">
+              <div class="info" v-if="c.topLevelItem">
                 <small class="pull-right text-muted timestamp" v-if="filter!=='favorites'">
                   {{c.topLevelItem.creationTime | time}}
                 </small>
