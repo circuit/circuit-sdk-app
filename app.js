@@ -28,7 +28,7 @@ var config = {
     },
     systems: [
         // Supported systems
-        {domain: 'circuitsandbox.net', name: 'Sandbox', client_id: '06f08f1efbfc4f6d96f086a3677fad0f'},
+        {domain: 'circuitsandbox.net', name: 'Sandbox', client_id: '797b577a127a4390a571dd72c8dd5383'},
         {domain: 'beta.circuit.com', name: 'Beta', client_id: '8d0572f9cc334c8287faf9e51e0ed871'},
         {domain: 'eu.yourcircuit.com', name: 'EU', client_id: '1b394869703e42ce9d4782c5f793ed95'},
         {domain: 'na.yourcircuit.com', name: 'NA', client_id: '', disabled: true},
